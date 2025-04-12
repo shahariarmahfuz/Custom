@@ -55,9 +55,11 @@ def index():
         user_id = request.form['user_id']
         history_data = load_history()
         if user_id not in history_data:
-            history_data[user_id] = {'name': name, 'full_name': name, 'last_login': datetime.datetime.now().isoformat(), 'chats': []} # Added full_name (can be adjusted)
+            history_data[user_id] = {'name': name, 'full_name': name, 'last_login': datetime.datetime.now().isoformat(), 'chats': []}
         else:
             history_data[user_id]['last_login'] = datetime.datetime.now().isoformat()
+            if 'full_name' not in history_data[user_id]:
+                history_data[user_id]['full_name'] = history_data[user_id].get('name')
         save_history(history_data)
         session['user_id'] = user_id
         return redirect(url_for('chat'))
@@ -175,4 +177,3 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
