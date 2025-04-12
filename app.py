@@ -46,26 +46,32 @@ def process_ai_response(text):
     return processed_text
 
 def process_code_blocks(text):
-    # Process HTML code blocks with copy functionality
-    def replace_html_code(match):
-        code = match.group(1).strip()
+    # Process all code blocks (```html and ```)
+    def replace_code_block(match):
+        code_type = match.group(1) or ''
+        code_content = match.group(2).strip()
+        
+        # Escape HTML entities
+        escaped_content = html.escape(code_content)
+        
+        # Generate unique IDs for the copy functionality
+        tooltip_id = f"tooltip-{uuid.uuid4()}"
+        
         return f'''
         <div class="code-container">
-            <div class="tooltip" id="tooltip-{uuid.uuid4()}">Copied!</div>
-            <button class="copy-icon" onclick="copyCode('tooltip-{uuid.uuid4()}', this)" aria-label="Copy Code">
+            <div class="tooltip" id="{tooltip_id}">Copied!</div>
+            <button class="copy-icon" onclick="copyCode('{tooltip_id}', this)" aria-label="Copy Code">
                 <svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 24 24">
                     <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 
                     1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
                 </svg>
             </button>
-            <pre>{html.escape(code)}</pre>
+            <pre>{escaped_content}</pre>
         </div>
         '''
     
-    # Process all code blocks (```html and ```)
-    text = re.sub(r'```html(.*?)```', replace_html_code, text, flags=re.DOTALL)
-    text = re.sub(r'```(.*?)```', replace_html_code, text, flags=re.DOTALL)
-    
+    # Handle both ```html and regular ``` code blocks
+    text = re.sub(r'```(html)?(.*?)```', replace_code_block, text, flags=re.DOTALL)
     return text
 
 def process_bullet_bold(text):
