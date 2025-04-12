@@ -6,7 +6,7 @@ import uuid
 import requests
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Important for session management
+app.secret_key = 'os_keda_bara'  # Important for session management
 
 HISTORY_FILE = 'history.json'
 CHAT_HISTORY_DIR = 'chat_history'
@@ -52,17 +52,38 @@ def index():
     """Handles the initial login page."""
     if request.method == 'POST':
         name = request.form['name']
-        user_id = request.form['user_id']
+        user_id = request.form['user_id'].strip()
+        
+        if not name or not user_id:
+            return render_template('index.html', error="Name and User ID are required")
+        
         history_data = load_history()
+        
+        # Clear any existing session
+        session.clear()
+        
+        # Create or update user info
         if user_id not in history_data:
-            history_data[user_id] = {'name': name, 'full_name': name, 'last_login': datetime.datetime.now().isoformat(), 'chats': []}
+            history_data[user_id] = {
+                'name': name,
+                'full_name': name,
+                'last_login': datetime.datetime.now().isoformat(),
+                'chats': []
+            }
         else:
+            # Update last login time and name if changed
             history_data[user_id]['last_login'] = datetime.datetime.now().isoformat()
+            history_data[user_id]['name'] = name
             if 'full_name' not in history_data[user_id]:
-                history_data[user_id]['full_name'] = history_data[user_id].get('name')
+                history_data[user_id]['full_name'] = name
+        
         save_history(history_data)
+        
+        # Set new session
         session['user_id'] = user_id
+        session['user_name'] = name
         return redirect(url_for('chat'))
+    
     return render_template('index.html')
 
 @app.route('/chat', methods=['GET', 'POST'])
@@ -77,7 +98,7 @@ def chat():
     if not user_info:
         return redirect(url_for('index'))
 
-    user_name = user_info['name']
+    user_name = user_info.get('name', 'User')
     chat_id = request.args.get('chat_id')
     chat_history_data = {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
     is_existing_chat = False
@@ -87,9 +108,10 @@ def chat():
             chat_history_data = load_chat_history(chat_id)
             is_existing_chat = True
         else:
-            return "Unauthorized access to this chat." # Prevent accessing others' chats
-    else:
-        chat_id = str(uuid.uuid4()) # Generate a new chat ID
+            return "Unauthorized access to this chat.", 403
+
+    if not chat_id:
+        chat_id = str(uuid.uuid4())
         chat_history_data['created_at'] = datetime.datetime.now().isoformat()
 
     if request.method == 'POST':
@@ -100,7 +122,7 @@ def chat():
         api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={current_chat_id}"
         try:
             response = requests.get(api_url)
-            response.raise_for_status()  # Raise an exception for bad status codes
+            response.raise_for_status()
             ai_response_data = response.json()
             ai_response = ai_response_data.get('response', 'No response from AI.')
         except requests.exceptions.RequestException as e:
@@ -110,6 +132,7 @@ def chat():
         updated_chat_history_data = load_chat_history(current_chat_id)
         if not updated_chat_history_data.get('messages'):
             updated_chat_history_data['messages'] = []
+        
         updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
@@ -125,13 +148,19 @@ def chat():
                         history_data[user_id]['chats'].append(current_chat_id)
                 save_history(history_data)
 
-        return jsonify({'response': ai_response}) # Changed to match expected response in JS
+        return jsonify({'response': ai_response})
 
-    return render_template('chat_combined.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history_data.get('messages', []), created_at=chat_history_data.get('created_at'))
+    return render_template('chat_combined.html', 
+                         user_name=user_name, 
+                         chat_id=chat_id, 
+                         chat_history=chat_history_data.get('messages', []), 
+                         created_at=chat_history_data.get('created_at'))
 
 @app.route('/new_chat')
 def new_chat():
     """Redirects to a new chat session."""
+    if not session.get('user_id'):
+        return redirect(url_for('index'))
     return redirect(url_for('chat'))
 
 @app.route('/get_history')
@@ -177,16 +206,19 @@ def account():
     if not user_info:
         return redirect(url_for('index'))
 
-    name = user_info.get('name')
-    full_name = user_info.get('full_name')
-    user_id_display = user_id
+    name = user_info.get('name', '')
+    full_name = user_info.get('full_name', name)
+    user_id_display = user_id  # Display the actual logged-in user's ID
 
-    return render_template('account.html', name=name, full_name=full_name, user_id=user_id_display)
+    return render_template('account.html', 
+                         name=name, 
+                         full_name=full_name, 
+                         user_id=user_id_display)
 
 @app.route('/logout')
 def logout():
     """Logs the user out by clearing the session."""
-    session.pop('user_id', None)
+    session.clear()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
