@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile Chat Interface</title>
+    <title>AI Chat Interface</title>
     <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
-        /* Existing CSS remains the same */
         :root {
             --font-size: 15px;
             --input-height: 50px;
@@ -17,7 +15,7 @@
             --border-color: #2F3336;
             --input-bg-color: #2F3336;
             --main-font: 'Helvetica Neue', Arial, sans-serif;
-            --user-message-bg: #333; /* Darker gray for user messages */
+            --user-message-bg: #333;
         }
 
         * {
@@ -70,54 +68,41 @@
             padding: 8px 16px;
             -webkit-overflow-scrolling: touch;
             display: flex;
-            flex-direction: column; /* Ensure messages stack properly */
+            flex-direction: column;
         }
-        /* B-এর মেসেজ - শুধু টেক্সট */
         .b-message {
             padding: 8px 0;
             font-size: var(--font-size);
             line-height: 1.4;
             word-break: break-word;
-            font-family: var(--main-font); /* Ensure font consistency */
-            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            font-family: var(--main-font);
+            white-space: pre-wrap;
         }
-        /* ইউজারের মেসেজ - শুধুমাত্র বক্স */
         .user-message-container {
             display: flex;
-            justify-content: flex-end; /* Align user messages to the right */
-            margin-bottom: 8px; /* Add some space between messages */
+            justify-content: flex-end;
+            margin-bottom: 8px;
         }
         .user-message {
-            background-color: var(--user-message-bg); /* Darker gray for user messages */
+            background-color: var(--user-message-bg);
             color: white;
             padding: 10px 14px;
             border-radius: 18px;
             font-size: var(--font-size);
             line-height: 1.4;
             word-break: break-word;
-            font-family: var(--main-font); /* Ensure font consistency */
-            display: inline-block; /* Make width adjust to content */
-            max-width: 80%; /* Still maintain a maximum width for very long messages */
-            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            font-family: var(--main-font);
+            display: inline-block;
+            max-width: 80%;
+            white-space: pre-wrap;
         }
-        /* রিপ্লাই মেসেজ - শুধু টেক্সট */
         .reply-message {
             padding: 8px 0;
             font-size: var(--font-size);
             line-height: 1.4;
             word-break: break-word;
-            font-family: var(--main-font); /* Ensure font consistency */
-            white-space: pre-wrap; /* Preserve whitespace and line breaks */
-        }
-        .reply-message pre {
-            background-color: #2F3336; /* Background for code block */
-            color: var(--text-color);
-            padding: 10px;
-            border-radius: 8px;
-            overflow-x: auto; /* Enable horizontal scrolling for long code */
-            font-family: monospace; /* Use a monospace font for code */
-            font-size: 0.9em;
-            white-space: pre-wrap; /* Preserve line breaks */
+            font-family: var(--main-font);
+            white-space: pre-wrap;
         }
         .input-area {
             padding: 8px 16px;
@@ -127,7 +112,7 @@
             bottom: 0;
             display: flex;
             gap: 8px;
-            align-items: center; /* Align items vertically in the input area */
+            align-items: center;
         }
         .input-container {
             flex: 1;
@@ -135,202 +120,222 @@
             background-color: var(--input-bg-color);
             display: flex;
             align-items: center;
-            padding: 2px; /* Add some padding around the textarea */
+            padding: 2px;
         }
         .input-area textarea {
             flex: 1;
             border: none;
             border-radius: 24px;
-            background-color: transparent; /* Make textarea background transparent */
+            background-color: transparent;
             color: var(--text-color);
             padding: 12px 16px;
             font-size: var(--font-size);
             resize: none;
             max-height: 120px;
             line-height: 1.4;
-            font-family: var(--main-font); /* Ensure font consistency */
+            font-family: var(--main-font);
         }
         .input-area textarea:focus {
             outline: none;
         }
         .input-area button {
-            background-color: var(--primary-color); /* Use the blue color */
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 50%; /* Make it a circle */
-            width: 44px; /* Adjust size as needed */
-            height: 44px; /* Adjust size as needed */
-            font-size: 22px; /* Adjust icon size */
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            padding: 0; /* Remove default padding */
-            margin-left: 8px; /* Add some spacing */
-            font-family: var(--main-font); /* Ensure font consistency (though likely not needed for icon) */
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Add a subtle shadow */
-            transition: background-color 0.2s ease-in-out; /* Add smooth transition for hover effect */
+            padding: 0;
+            margin-left: 8px;
+            font-family: var(--main-font);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s ease-in-out;
         }
         .input-area button:hover {
-            background-color: #1989da; /* Slightly darker shade on hover */
+            background-color: #1989da;
         }
         .input-area button:active {
-            background-color: #1570ad; /* Even darker shade when pressed */
+            background-color: #1570ad;
         }
-        /* মোবাইল স্ক্রলবার স্টাইল */
         .messages::-webkit-scrollbar {
             width: 3px;
         }
         .messages::-webkit-scrollbar-thumb {
             background-color: var(--border-color);
         }
-
-        /* Loading Dots Animation CSS */
         .dot-loader {
             display: flex;
-            gap: 6px; /* Reduced gap */
-            justify-content: flex-start; /* Align to the left like other messages */
+            gap: 6px;
+            justify-content: flex-start;
             padding: 8px 0;
         }
-
         .dot {
-            width: 8px; /* Reduced dot size */
-            height: 8px; /* Reduced dot size */
+            width: 8px;
+            height: 8px;
             background-color: white;
             border-radius: 50%;
             animation: bounce 1.2s infinite ease-in-out;
         }
-
         .dot:nth-child(1) {
             animation-delay: 0s;
         }
-
         .dot:nth-child(2) {
             animation-delay: 0.15s;
         }
-
         .dot:nth-child(3) {
             animation-delay: 0.3s;
         }
-
         @keyframes bounce {
             0%, 80%, 100% {
                 transform: scale(1);
                 opacity: 0.3;
             }
             40% {
-                transform: scale(1.2); /* Reduced bounce scale */
+                transform: scale(1.2);
                 opacity: 1;
             }
+        }
+        .code-output {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            overflow-x: auto;
+            color: #fff;
+            font-family: monospace;
+            white-space: pre-wrap;
+            border: 1px solid #333;
+        }
+        .code-output pre {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+        }
+        b, strong {
+            font-weight: bold;
+        }
+        i, em {
+            font-style: italic;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <img src="https://via.placeholder.com/36" alt="Profile">
-        <h3>@Username</h3>
+        <h3>AI Assistant</h3>
     </div>
 
-    <div class="messages" id="messageArea">
-    </div>
+    <div class="messages" id="messageArea"></div>
 
     <div class="input-area">
         <div class="input-container">
-            <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+            <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
         </div>
-        <button onclick="sendMessage()">&#x27A2;</button> </div>
+        <button id="sendButton">➜</button>
+    </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
-        const textarea = document.getElementById('messageInput');
-        const messageArea = document.getElementById('messageArea');
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('messageInput');
+            const messageArea = document.getElementById('messageArea');
+            const sendButton = document.getElementById('sendButton');
 
-        // অটো রিসাইজিং (মোবাইল ফ্রেন্ডলি)
-        textarea.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-        });
+            // Auto-resize textarea
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
 
-        // Enter = New line
-        textarea.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                return true; // Let the default action (newline) occur
-            }
-        });
+            // Handle Enter key (send on Enter, newline on Shift+Enter)
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
 
-        function sendMessage() {
-            const message = textarea.value.trim();
-            if (message) {
-                // ইউজারের মেসেজ যোগ করুন
-                const userMessageContainer = document.createElement('div');
-                userMessageContainer.className = 'user-message-container';
+            // Send button click handler
+            sendButton.addEventListener('click', sendMessage);
 
-                const userMsg = document.createElement('div');
-                userMsg.className = 'user-message';
-                userMsg.textContent = message;
-                userMessageContainer.appendChild(userMsg);
-                messageArea.appendChild(userMessageContainer);
+            async function sendMessage() {
+                const message = textarea.value.trim();
+                if (!message) return;
 
+                // Add user message
+                addMessage(message, 'user');
                 textarea.value = '';
                 textarea.style.height = 'auto';
-                messageArea.scrollTop = messageArea.scrollHeight;
 
                 // Show loading animation
-                const loadingDots = document.createElement('div');
-                loadingDots.className = 'dot-loader';
-                loadingDots.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-                messageArea.appendChild(loadingDots);
-                messageArea.scrollTop = messageArea.scrollHeight;
+                const loadingId = showLoading();
 
-                fetch('/send_message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message: message })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Remove loading animation
-                    const loadingDotsElement = messageArea.querySelector('.dot-loader');
-                    if (loadingDotsElement) {
-                        messageArea.removeChild(loadingDotsElement);
-                    }
-
-                    const reply = data.response;
-                    const replyMsg = document.createElement('div');
-                    replyMsg.className = 'reply-message';
-                    replyMsg.innerHTML = reply; // Set as innerHTML to handle code blocks and other formatting
-
-                    messageArea.appendChild(replyMsg);
-                    messageArea.scrollTop = messageArea.scrollHeight;
-
-                    // Highlight code blocks after adding to the DOM
-                    const codeBlocks = replyMsg.querySelectorAll('pre code');
-                    codeBlocks.forEach(block => {
-                        hljs.highlightElement(block);
+                try {
+                    // Send to backend
+                    const response = await fetch('/send_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `message=${encodeURIComponent(message)}`
                     });
-                })
-                .catch(error => {
-                    console.error('Error sending message:', error);
-                    // Remove loading animation on error
-                    const loadingDotsElement = messageArea.querySelector('.dot-loader');
-                    if (loadingDotsElement) {
-                        messageArea.removeChild(loadingDotsElement);
-                    }
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'reply-message';
-                    errorMsg.textContent = 'Error fetching response.';
-                    messageArea.appendChild(errorMsg);
-                    messageArea.scrollTop = messageArea.scrollHeight;
-                });
+                    
+                    const data = await response.json();
+                    
+                    // Remove loading and show response
+                    hideLoading(loadingId);
+                    addMessage(data.html, 'bot');
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    hideLoading(loadingId);
+                    addMessage('Sorry, an error occurred. Please try again.', 'bot');
+                }
             }
-        }
 
-        // প্রথম লোডে মেসেজ এরিয়াকে নিচে স্ক্রল করুন
-        window.onload = function() {
-            messageArea.scrollTop = messageArea.scrollHeight;
-        };
+            function addMessage(content, sender) {
+                const messageDiv = document.createElement('div');
+                
+                if (sender === 'user') {
+                    messageDiv.className = 'user-message-container';
+                    messageDiv.innerHTML = `<div class="user-message">${content}</div>`;
+                } else {
+                    messageDiv.className = 'reply-message';
+                    messageDiv.innerHTML = content;
+                }
+                
+                messageArea.appendChild(messageDiv);
+                messageArea.scrollTop = messageArea.scrollHeight;
+            }
+
+            function showLoading() {
+                const loadingId = 'loading-' + Date.now();
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = loadingId;
+                loadingDiv.className = 'dot-loader';
+                loadingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+                messageArea.appendChild(loadingDiv);
+                messageArea.scrollTop = messageArea.scrollHeight;
+                return loadingId;
+            }
+
+            function hideLoading(id) {
+                const loadingElement = document.getElementById(id);
+                if (loadingElement) {
+                    loadingElement.remove();
+                }
+            }
+        });
     </script>
 </body>
 </html>
