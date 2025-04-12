@@ -196,6 +196,15 @@ def chat():
         chat_id = str(uuid.uuid4())
         chat_history_data['created_at'] = datetime.datetime.now().isoformat()
 
+    # Process existing messages for formatting
+    processed_messages = []
+    for msg in chat_history_data.get('messages', []):
+        if msg['sender'] == 'ai':
+            formatted_content = format_response(msg['content'])
+            processed_messages.append({'sender': 'ai', 'content': formatted_content})
+        else:
+            processed_messages.append(msg)
+
     if request.method == 'POST':
         user_text = request.form['user_input']
         current_chat_id = request.form['chat_id']
@@ -237,10 +246,71 @@ def chat():
     return render_template('chat_combined.html', 
                          user_name=user_name, 
                          chat_id=chat_id, 
-                         chat_history=chat_history_data.get('messages', []), 
+                         chat_history=processed_messages, 
                          created_at=chat_history_data.get('created_at'))
 
-# ... (বাকি রাউটগুলো একই থাকবে)
+@app.route('/new_chat')
+def new_chat():
+    """Redirects to a new chat session."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return redirect(url_for('chat'))
+
+@app.route('/get_history')
+def get_history():
+    """Returns the chat history for the logged-in user as JSON."""
+    if 'user_id' not in session:
+        return jsonify([])
+
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user or 'chats' not in user:
+        return jsonify([])
+
+    chat_sessions = {}
+    for chat_id in user['chats']:
+        filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
+        if os.path.exists(filepath):
+            chat_data = load_chat_history(chat_id)
+            if chat_data and chat_data.get('messages'):
+                first_user_message = next((msg['content'] for msg in chat_data.get('messages', []) if msg['sender'] == 'user'), None)
+                title = "New Chat"
+                if first_user_message:
+                    title_words = first_user_message.split()[:4]
+                    title = " ".join(title_words)
+                chat_sessions[chat_id] = {
+                    'title': title,
+                    'message_count': len(chat_data.get('messages', [])),
+                    'created_at': chat_data.get('created_at', datetime.datetime.now().isoformat())
+                }
+
+    return jsonify(chat_sessions)
+
+@app.route('/account')
+def account():
+    """Displays the user's account information."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    return render_template('account.html', 
+                         first_name=user['first_name'],
+                         last_name=user['last_name'],
+                         full_name=user['full_name'],
+                         email=session['email'],
+                         user_id=user['user_id'],
+                         created_at=user['created_at'])
+
+@app.route('/logout')
+def logout():
+    """Logs the user out."""
+    session.clear()
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
