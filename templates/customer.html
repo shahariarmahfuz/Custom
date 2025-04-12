@@ -250,9 +250,10 @@
 
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault(); // Prevent new line on Enter
+                    // Prevent default action to avoid submitting forms if any
+                    // e.preventDefault();
+                    // sendMessage(); // Remove this line to prevent sending on Enter
                 }
-                // Allow new line only with Shift+Enter
             });
 
             sendButton.addEventListener('click', sendMessage);
@@ -275,17 +276,17 @@
                         },
                         body: `message=${encodeURIComponent(message)}`
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
                     const data = await response.json();
-                    
+
                     hideLoading(loadingId);
                     addMessage(data.html, 'bot');
                     Prism.highlightAll();
-                    
+
                 } catch (error) {
                     console.error('Error:', error);
                     hideLoading(loadingId);
@@ -295,7 +296,7 @@
 
             function addMessage(content, sender) {
                 const messageDiv = document.createElement('div');
-                
+
                 if (sender === 'user') {
                     messageDiv.className = 'user-message-container';
                     messageDiv.innerHTML = `<div class="user-message">${content}</div>`;
@@ -303,7 +304,7 @@
                     messageDiv.className = 'reply-message';
                     messageDiv.innerHTML = content;
                 }
-                
+
                 messageArea.appendChild(messageDiv);
                 messageArea.scrollTop = messageArea.scrollHeight;
             }
