@@ -396,6 +396,24 @@
         .button-group button:hover {
             background-color: #333;
         }
+
+        #accountButtonSidebar {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: #eee;
+            color: #000;
+            text-align: left;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #accountButtonSidebar:hover {
+            background-color: #ddd;
+        }
     </style>
 </head>
 <body>
@@ -407,13 +425,12 @@
 
     <div class="messages" id="chat_area">
         {% for message in chat_history %}
-            {% if 'user' in message %}
+            {% if message.sender == 'user' %}
                 <div class="user-message-container">
-                    <div class="user-message">{{ message.user }}</div>
+                    <div class="user-message">{{ message.content }}</div>
                 </div>
-            {% endif %}
-            {% if 'ai' in message %}
-                <div class="reply-message">{{ message.ai }}</div>
+            {% elif message.sender == 'ai' %}
+                <div class="reply-message">{{ message.content }}</div>
             {% endif %}
         {% endfor %}
     </div>
@@ -434,6 +451,7 @@
             <button id="closeSidebar" class="icon-button" onclick="closeHistory()">×</button>
         </div>
         <div id="history_list" class="history-items"></div>
+        <button id="accountButtonSidebar" onclick="window.location.href='/account'">Account</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
@@ -446,7 +464,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             historySidebar = document.getElementById("history_sidebar");
             overlay = document.getElementById("overlay");
-            
+
             // Textarea auto-resize
             const textarea = document.getElementById('user_input');
             textarea.addEventListener('input', function() {
@@ -480,35 +498,25 @@
                 .then(data => {
                     const historyList = document.getElementById('history_list');
                     historyList.innerHTML = '';
-                    
+
                     if (!data || Object.keys(data).length === 0) {
                         historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: #888;">No chat history</div>';
                         return;
                     }
-                    
+
                     // Sort chats by creation date (newest first)
-                    const sortedChats = Object.entries(data).sort((a, b) => {
-                        return new Date(b[1].created_at) - new Date(a[1].created_at);
+                    const sortedChats = Object.entries(data).sort(([, a], [, b]) => {
+                        return new Date(b.created_at) - new Date(a.created_at);
                     });
 
                     for (const [chatId, chatData] of sortedChats) {
                         const itemDiv = document.createElement('div');
                         itemDiv.className = 'history-item';
-                        
-                        // Get first message content or default title
-                        let title = 'New Chat';
-                        if (chatData.messages && chatData.messages.length > 0) {
-                            const firstUserMessage = chatData.messages.find(msg => msg.sender === 'user');
-                            if (firstUserMessage) {
-                                title = firstUserMessage.content.length > 30 
-                                    ? firstUserMessage.content.substring(0, 30) + '...' 
-                                    : firstUserMessage.content;
-                            }
-                        }
-                        
-                        const messageCount = chatData.messages ? chatData.messages.length : 0;
+
+                        const title = chatData.title;
+                        const messageCount = chatData.message_count;
                         const date = new Date(chatData.created_at);
-                        
+
                         itemDiv.innerHTML = `
                             <div class="history-item-title">${title}</div>
                             <div class="history-item-meta">
@@ -516,11 +524,11 @@
                                 <span>${date.toLocaleDateString()}</span>
                             </div>
                         `;
-                        
+
                         itemDiv.addEventListener('click', function() {
                             window.location.href = `/chat?chat_id=${chatId}`;
                         });
-                        
+
                         historyList.appendChild(itemDiv);
                     }
                 })
@@ -543,7 +551,7 @@
             userMessageDiv.className = 'user-message-container';
             userMessageDiv.innerHTML = `<div class="user-message">${message}</div>`;
             chatArea.appendChild(userMessageDiv);
-            
+
             userInput.value = '';
             userInput.style.height = 'auto';
 
@@ -565,19 +573,19 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById(loadingId).remove();
-                
+
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.className = 'reply-message';
-                aiMessageDiv.innerHTML = data.ai;
+                aiMessageDiv.innerHTML = data.response;
                 chatArea.appendChild(aiMessageDiv);
-                
+
                 chatArea.scrollTop = chatArea.scrollHeight;
                 Prism.highlightAll();
             })
             .catch(error => {
                 console.error('Error sending message:', error);
                 document.getElementById(loadingId).remove();
-                
+
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'reply-message';
                 errorDiv.style.color = '#ff4444';
