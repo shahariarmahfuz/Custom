@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import json
 import os
@@ -88,7 +87,7 @@ def chat():
             chat_history_data = load_chat_history(chat_id)
             is_existing_chat = True
         else:
-            return render_template('unauthorized.html', message="You are not authorized to access this chat.")
+            return "Unauthorized access to this chat." # Prevent accessing others' chats
     else:
         chat_id = str(uuid.uuid4()) # Generate a new chat ID
         chat_history_data['created_at'] = datetime.datetime.now().isoformat()
@@ -96,11 +95,6 @@ def chat():
     if request.method == 'POST':
         user_text = request.form['user_input']
         current_chat_id = request.form['chat_id']
-
-        # Security check for POST requests as well
-        if current_chat_id:
-            if user_id not in history_data or 'chats' not in history_data[user_id] or current_chat_id not in history_data[user_id]['chats']:
-                return jsonify({'error': 'Unauthorized access'}), 403
 
         # Send message to AI API
         api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={current_chat_id}"
