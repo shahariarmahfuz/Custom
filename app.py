@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import requests
 import uuid
 import re
+import html
 
 app = Flask(__name__)
 
@@ -30,24 +31,49 @@ def handle_message():
         return jsonify({'html': f'Error: {str(e)}'})
 
 def process_ai_response(text):
-    # এইচটিএমএল কোড ব্লক প্রসেসিং
-    code_blocks = re.findall(r'```html(.*?)```', text, re.DOTALL)
-    text_parts = re.split(r'```html.*?```', text, flags=re.DOTALL)
+    # Process code blocks first
+    processed_text = process_code_blocks(text)
     
-    processed = []
-    for i, part in enumerate(text_parts):
-        part = part.strip()
-        if part:
-            # মার্কডাউন ফরম্যাটিং
-            part = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', part)
-            part = re.sub(r'\*(.*?)\*', r'<i>\1</i>', part)
-            processed.append(part)
-        if i < len(code_blocks):
-            # কোড ব্লক যোগ করুন
-            code = code_blocks[i].strip()
-            processed.append(f'<div class="code-output">{code}</div>')
+    # Process bullet points with bold text
+    processed_text = process_bullet_bold(processed_text)
     
-    return ''.join(processed)
+    # Process bold text
+    processed_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', processed_text)
+    
+    # Process italic text
+    processed_text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', processed_text)
+    
+    return processed_text
+
+def process_code_blocks(text):
+    # Process HTML code blocks with copy functionality
+    def replace_html_code(match):
+        code = match.group(1).strip()
+        return f'''
+        <div class="code-container">
+            <div class="tooltip" id="tooltip-{uuid.uuid4()}">Copied!</div>
+            <button class="copy-icon" onclick="copyCode('tooltip-{uuid.uuid4()}', this)" aria-label="Copy Code">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 24 24">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 
+                    1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
+                </svg>
+            </button>
+            <pre>{html.escape(code)}</pre>
+        </div>
+        '''
+    
+    # Process all code blocks (```html and ```)
+    text = re.sub(r'```html(.*?)```', replace_html_code, text, flags=re.DOTALL)
+    text = re.sub(r'```(.*?)```', replace_html_code, text, flags=re.DOTALL)
+    
+    return text
+
+def process_bullet_bold(text):
+    # Process bullet points with bold text (* **text**)
+    def replace_bullet_bold(match):
+        return f'<li><b>{match.group(1)}</b></li>'
+    
+    return re.sub(r'\*\s+\*\*(.*?)\*\*', replace_bullet_bold, text)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
