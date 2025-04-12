@@ -24,20 +24,15 @@
             height: 100%;
             left: 0;
             top: 0;
-            display: flex;
-            flex-direction: column;
         }
 
         #history_sidebar h2 {
             padding-left: 20px;
-            margin-bottom: 10px;
         }
 
         #history_list {
             list-style-type: none;
             padding: 0;
-            flex-grow: 1; /* Allow history list to take up available space */
-            overflow-y: auto; /* Make the history list scrollable */
         }
 
         #history_list li {
@@ -68,15 +63,18 @@
             background-color:#ccc;
         }
 
-        #account_button_sidebar {
+        #history_sidebar button {
+            display: block;
+            width: 100%;
             padding: 10px;
-            text-align: center;
-            border-top: 1px solid #ccc;
+            border: none;
+            background-color: #eee;
+            text-align: left;
+            cursor: pointer;
         }
 
-        #account_button_sidebar button {
-            padding: 8px 15px;
-            cursor: pointer;
+        #history_sidebar button:hover {
+            background-color: #ddd;
         }
     </style>
     <script>
@@ -153,9 +151,7 @@
         <h2>Chat History</h2>
         <ul id="history_list">
             </ul>
-        <div id="account_button_sidebar">
-            <button onclick="window.location.href='/account'">Account</button>
-        </div>
+        <button onclick="window.location.href='/account'">Account</button>
         <a href="javascript:void(0)" onclick="closeHistory()"
            style="position: absolute; top: 20px; right: 25px; font-size: 30px; margin-left: 50px;">&times;</a>
     </div>
