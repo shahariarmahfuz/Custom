@@ -76,13 +76,25 @@ def chat():
         return redirect(url_for('index'))
 
     user_name = user_info['name']
+    chat_id = request.args.get('chat_id')
+    chat_history = []
+    is_existing_chat = False
+
+    if chat_id:
+        if user_id in history_data and 'chats' in history_data[user_id] and chat_id in history_data[user_id]['chats']:
+            chat_history = load_chat_history(chat_id)
+            is_existing_chat = True
+        else:
+            return "Unauthorized access to this chat." # Prevent accessing others' chats
+    else:
+        chat_id = str(uuid.uuid4()) # Generate a new chat ID
 
     if request.method == 'POST':
         user_text = request.form['user_input']
-        chat_id = request.form['chat_id']
+        current_chat_id = request.form['chat_id']
 
         # Send message to AI API
-        api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={chat_id}"
+        api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={current_chat_id}"
         try:
             response = requests.get(api_url)
             response.raise_for_status()  # Raise an exception for bad status codes
@@ -92,30 +104,22 @@ def chat():
             ai_response = f"Error communicating with AI: {e}"
 
         # Save chat history
-        chat_history = load_chat_history(chat_id)
-        chat_history.append({'user': user_text, 'ai': ai_response})
-        save_chat_history(chat_id, chat_history)
+        updated_chat_history = load_chat_history(current_chat_id)
+        updated_chat_history.append({'user': user_text, 'ai': ai_response})
+        save_chat_history(current_chat_id, updated_chat_history)
+
+        # If this is the first message in a new chat, save the chat ID to history
+        if not is_existing_chat and updated_chat_history:
+            history_data = load_history()
+            if user_id in history_data:
+                if 'chats' not in history_data[user_id]:
+                    history_data[user_id]['chats'] = [current_chat_id]
+                else:
+                    if current_chat_id not in history_data[user_id]['chats']:
+                        history_data[user_id]['chats'].append(current_chat_id)
+                save_history(history_data)
 
         return jsonify({'user': user_text, 'ai': ai_response})
-
-    # Initial load or new chat
-    chat_id = request.args.get('chat_id')
-    chat_history = []
-    if not chat_id:
-        chat_id = str(uuid.uuid4()) # Generate a new chat ID
-        # Associate this new chat ID with the user
-        if user_id not in history_data:
-            history_data[user_id] = {'name': user_name, 'last_login': datetime.datetime.now().isoformat(), 'chats': [chat_id]}
-        else:
-            if 'chats' not in history_data[user_id]:
-                history_data[user_id]['chats'] = [chat_id]
-            else:
-                history_data[user_id]['chats'].append(chat_id)
-        save_history(history_data)
-    else:
-        if user_id not in history_data or 'chats' not in history_data[user_id] or chat_id not in history_data[user_id]['chats']:
-            return "Unauthorized access to this chat." # Prevent accessing others' chats
-        chat_history = load_chat_history(chat_id)
 
     return render_template('chat_combined.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history)
 
@@ -138,7 +142,12 @@ def get_history():
 
     chat_sessions = []
     for chat_id in user_info['chats']:
-        chat_sessions.append({'id': chat_id})
+        # You might want to add some logic here to check if the chat file actually exists
+        # and has any content before including it in the history.
+        if os.path.exists(os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')):
+            chat_history = load_chat_history(chat_id)
+            if chat_history:  # Only show if there's chat history
+                chat_sessions.append({'id': chat_id})
 
     return jsonify(chat_sessions)
 
