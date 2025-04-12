@@ -200,22 +200,56 @@
                 opacity: 1;
             }
         }
-        .code-output {
-            background: #1a1a1a;
-            padding: 12px;
-            border-radius: 8px;
+        /* Code block styling */
+        .code-container {
+            position: relative;
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px 20px 20px 20px;
             margin: 10px 0;
+            box-shadow: 0 0 10px rgba(0,0,0,0.4);
             overflow-x: auto;
-            color: #fff;
-            font-family: monospace;
-            white-space: pre-wrap;
-            border: 1px solid #333;
         }
-        .code-output pre {
+        .code-container pre {
             margin: 0;
-            padding: 0;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #dcdcdc;
+            white-space: pre-wrap;
         }
+        .copy-icon {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #333;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 5px;
+            color: #aaa;
+            transition: all 0.3s ease;
+        }
+        .copy-icon:hover {
+            color: #fff;
+            background: #444;
+        }
+        .tooltip {
+            position: absolute;
+            top: -30px;
+            right: 0;
+            background: #444;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip.show {
+            opacity: 1;
+        }
+        /* Text formatting */
         b, strong {
             font-weight: bold;
         }
@@ -224,9 +258,19 @@
         }
         ul {
             padding-left: 20px;
+            margin: 8px 0;
         }
         li {
             margin-bottom: 5px;
+            list-style-type: none;
+            position: relative;
+            padding-left: 15px;
+        }
+        li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
         }
     </style>
 </head>
@@ -294,13 +338,65 @@
                     
                     // Remove loading and show response
                     hideLoading(loadingId);
-                    addMessage(data.html, 'bot');
+                    displayFormattedResponse(data.response);
                     
                 } catch (error) {
                     console.error('Error:', error);
                     hideLoading(loadingId);
                     addMessage('Sorry, an error occurred. Please try again.', 'bot');
                 }
+            }
+
+            function displayFormattedResponse(response) {
+                // Process code blocks first
+                let processed = response;
+                
+                // Handle ``` code blocks
+                processed = processed.replace(/```([\s\S]*?)```/g, function(match, code) {
+                    const codeId = 'code-' + Date.now();
+                    return `
+                        <div class="code-container">
+                            <button class="copy-icon" onclick="copyToClipboard('${codeId}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
+                                </svg>
+                            </button>
+                            <pre id="${codeId}">${code.trim()}</pre>
+                        </div>
+                    `;
+                });
+
+                // Handle bold (**text**)
+                processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                
+                // Handle italic (*text*)
+                processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                
+                // Handle bullet points (* **text**)
+                processed = processed.replace(/^\*\s\*\*(.*?)\*\*/gm, '<li><strong>$1</strong></li>');
+                processed = processed.replace(/^\*\s(.*?)$/gm, '<li>$1</li>');
+                
+                // Replace multiple newlines with <br> and <p> tags
+                processed = processed.replace(/\n\n/g, '</p><p>');
+                processed = processed.replace(/\n/g, '<br>');
+                
+                // Wrap in paragraph tags if needed
+                if (!processed.startsWith('<') && !processed.startsWith('\n')) {
+                    processed = '<p>' + processed + '</p>';
+                }
+                
+                // Replace lists
+                processed = processed.replace(/<li>.*?<\/li>/g, function(match) {
+                    if (!processed.includes('<ul>')) {
+                        return '<ul>' + match + '</ul>';
+                    }
+                    return match;
+                });
+                
+                // Fix nested ul tags
+                processed = processed.replace(/<\/ul>\s*<ul>/g, '');
+                
+                addMessage(processed, 'bot');
             }
 
             function addMessage(content, sender) {
@@ -336,6 +432,25 @@
                 }
             }
         });
+
+        // Global function for copy to clipboard
+        function copyToClipboard(id) {
+            const codeElement = document.getElementById(id);
+            const codeText = codeElement.textContent;
+            
+            navigator.clipboard.writeText(codeText).then(() => {
+                // Show tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip show';
+                tooltip.textContent = 'Copied!';
+                codeElement.parentNode.appendChild(tooltip);
+                
+                setTimeout(() => {
+                    tooltip.classList.remove('show');
+                    setTimeout(() => tooltip.remove(), 300);
+                }, 1500);
+            });
+        }
     </script>
 </body>
 </html>
