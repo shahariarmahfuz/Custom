@@ -250,9 +250,9 @@
 
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
+                    e.preventDefault(); // Prevent new line on Enter
                 }
+                // Allow new line only with Shift+Enter
             });
 
             sendButton.addEventListener('click', sendMessage);
