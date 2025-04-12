@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Chat Interface</title>
-    <link rel="icon" type="image/x-icon" href="https://i.postimg.cc/NGpYP3SF/20250408-093122-2.jpg">
-    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="[https://i.postimg.cc/NGpYP3SF/20250408-093122-2.jpg](https://i.postimg.cc/NGpYP3SF/20250408-093122-2.jpg)">
+    <link href="[https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982](https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982)" rel="stylesheet">
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css)" rel="stylesheet">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --font-size: 15px;
@@ -18,6 +19,7 @@
             --input-bg-color: #2F3336;
             --main-font: 'Helvetica Neue', sans-serif;
             --user-message-bg: #333;
+            --history-sidebar-width: 300px;
         }
 
         * {
@@ -53,17 +55,25 @@
             top: 0;
             z-index: 10;
             background-color: #000;
+            justify-content: space-between;
         }
-        .header img {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            margin-right: 12px;
-            object-fit: cover;
+        .header-left {
+            display: flex;
+            align-items: center;
         }
-        .header h3 {
+        .header-left h3 {
             font-size: var(--font-size);
             font-weight: 700;
+            margin-left: 8px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-right i {
+            font-size: 20px;
+            cursor: pointer;
         }
         .messages {
             flex: 1;
@@ -217,15 +227,79 @@
         li {
             margin-bottom: 5px;
         }
+
+        /* History Sidebar Styles */
+        .history-sidebar {
+            position: fixed;
+            top: 0;
+            right: -var(--history-sidebar-width);
+            width: var(--history-sidebar-width);
+            height: 100%;
+            background-color: #192734;
+            border-left: 1px solid var(--border-color);
+            z-index: 11;
+            transition: right 0.3s ease-in-out;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .history-sidebar.open {
+            right: 0;
+        }
+        .history-sidebar h4 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .history-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            color: var(--text-color);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        .history-item:hover {
+            background-color: #2f3336;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            display: none;
+        }
+        .overlay.open {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <img src="https://i.postimg.cc/NGpYP3SF/20250408-093122-2.jpg" alt="AI Profile">
-        <h3>AI Assistant</h3>
+        <div class="header-left">
+            <i class="fa-solid fa-plus" id="newChatButton" style="cursor: pointer;"></i>
+            <h3 style="margin-left: 8px;">AI Assistant</h3>
+        </div>
+        <div class="header-right">
+            <i class="fa-solid fa-clock-rotate-left" id="historyButton" style="cursor: pointer;"></i>
+        </div>
     </div>
 
-    <div class="messages" id="messageArea"></div>
+    <div class="messages" id="messageArea">
+        </div>
 
     <div class="input-area">
         <div class="input-container">
@@ -234,14 +308,44 @@
         <button id="sendButton">➜</button>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
+    <div class="history-sidebar" id="historySidebar">
+        <h4>Chat History</h4>
+        <ul class="history-list" id="historyList">
+            </ul>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js)"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const textarea = document.getElementById('messageInput');
             const messageArea = document.getElementById('messageArea');
             const sendButton = document.getElementById('sendButton');
+            const newChatButton = document.getElementById('newChatButton');
+            const historyButton = document.getElementById('historyButton');
+            const historySidebar = document.getElementById('historySidebar');
+            const historyList = document.getElementById('historyList');
+            const overlay = document.getElementById('overlay');
+            let currentChatId = "{{ chat_id }}";
+
+            function loadExistingHistory() {
+                const historyData = JSON.parse('{{ history|tojson|safe }}');
+                messageArea.innerHTML = '';
+                historyData.forEach(item => {
+                    if (item.sender === 'user') {
+                        addMessage(item.text, 'user');
+                    } else if (item.sender === 'bot') {
+                        addMessage(item.html, 'bot');
+                    }
+                });
+                Prism.highlightAll();
+            }
+
+            loadExistingHistory();
+            loadHistoryList();
 
             textarea.addEventListener('input', function() {
                 this.style.height = 'auto';
@@ -250,13 +354,75 @@
 
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    // Prevent default action to avoid submitting forms if any
-                    // e.preventDefault();
-                    // sendMessage(); // Remove this line to prevent sending on Enter
+                    e.preventDefault();
+                    sendMessage();
                 }
             });
 
             sendButton.addEventListener('click', sendMessage);
+
+            newChatButton.addEventListener('click', function() {
+                fetch('/new_chat')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        }
+                    });
+            });
+
+            historyButton.addEventListener('click', function() {
+                historySidebar.classList.add('open');
+                overlay.classList.add('open');
+            });
+
+            overlay.addEventListener('click', function() {
+                historySidebar.classList.remove('open');
+                overlay.classList.remove('open');
+            });
+
+            function loadHistoryList() {
+                fetch('/get_history_list')
+                    .then(response => response.json())
+                    .then(data => {
+                        historyList.innerHTML = '';
+                        data.forEach(historyItem => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'history-item';
+                            listItem.textContent = historyItem.last_message || `Chat ID: ${historyItem.chat_id}`;
+                            listItem.addEventListener('click', function() {
+                                loadChatHistory(historyItem.chat_id);
+                                historySidebar.classList.remove('open');
+                                overlay.classList.remove('open');
+                            });
+                            historyList.appendChild(listItem);
+                        });
+                    })
+                    .catch(error => console.error('Error loading history list:', error));
+            }
+
+            function loadChatHistory(chatId) {
+                fetch(`/load_history/${chatId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.history) {
+                            messageArea.innerHTML = '';
+                            currentChatId = chatId;
+                            data.history.forEach(item => {
+                                if (item.sender === 'user') {
+                                    addMessage(item.text, 'user');
+                                } else if (item.sender === 'bot') {
+                                    addMessage(item.html, 'bot');
+                                }
+                            });
+                            Prism.highlightAll();
+                        } else if (data.error) {
+                            console.error('Error loading chat history:', data.error);
+                            messageArea.innerHTML = `<div class="reply-message">Error loading chat history: ${data.error}</div>`;
+                        }
+                    })
+                    .catch(error => console.error('Error loading chat history:', error));
+            }
 
             async function sendMessage() {
                 const message = textarea.value.trim();
@@ -286,6 +452,7 @@
                     hideLoading(loadingId);
                     addMessage(data.html, 'bot');
                     Prism.highlightAll();
+                    loadHistoryList(); // Update history list after sending a message
 
                 } catch (error) {
                     console.error('Error:', error);
