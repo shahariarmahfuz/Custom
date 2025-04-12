@@ -13,8 +13,12 @@
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
+        html, body {
+            height: auto;
+            scroll-behavior: smooth;
+        }
+
         body {
-            min-height: 100vh;
             background: linear-gradient(45deg, #1a1a1a, #0d0d0d);
             color: white;
             overflow-x: hidden;
@@ -24,11 +28,9 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
-            /* min-height: 100vh; এই লাইনটি বাদ দেওয়া হয়েছে */
+            padding: 4rem 2rem;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
             text-align: center;
             position: relative;
@@ -177,10 +179,9 @@
             font-size: 0.9rem;
         }
 
-        /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             .container {
-                padding: 1rem;
+                padding: 2rem 1rem;
             }
 
             .glass-panel {
@@ -253,7 +254,6 @@
             }
         }
 
-        /* Touch device specific styles */
         .touch-device .auth-link:hover {
             transform: none !important;
             background: rgba(255,255,255,0.05);
@@ -271,7 +271,7 @@
         <div class="glass-panel">
             <h1>Echo AI</h1>
             <p class="tagline">Next Generation Artificial Intelligence Platform</p>
-
+            
             <div class="features">
                 <div class="feature">
                     <i class="fas fa-brain"></i>
