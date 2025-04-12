@@ -191,6 +191,11 @@ def chat():
         chat_id = str(uuid.uuid4())
         chat_history_data['created_at'] = datetime.datetime.now().isoformat()
 
+    formatted_chat_history = []
+    for message in chat_history_data.get('messages', []):
+        formatted_content = text_formatter(message['content'])
+        formatted_chat_history.append({'sender': message['sender'], 'content': formatted_content})
+
     if request.method == 'POST':
         user_text = request.form['user_input']
         current_chat_id = request.form['chat_id']
@@ -215,23 +220,12 @@ def chat():
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': formatted_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
 
-        # If this is the first message in a new chat, save the chat ID to user's history
-        if not is_existing_chat and updated_chat_history_data['messages']:
-            users = load_users()
-            if session['email'] in users:
-                if 'chats' not in users[session['email']]:
-                    users[session['email']]['chats'] = [current_chat_id]
-                else:
-                    if current_chat_id not in users[session['email']]['chats']:
-                        users[session['email']]['chats'].append(current_chat_id)
-                save_users(users)
-
         return jsonify({'response': formatted_response})
 
     return render_template('chat_combined.html',
                          user_name=user_name,
                          chat_id=chat_id,
-                         chat_history=chat_history_data.get('messages', []),
+                         chat_history=formatted_chat_history,
                          created_at=chat_history_data.get('created_at'))
 
 @app.route('/new_chat')
