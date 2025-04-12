@@ -7,6 +7,7 @@
     <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
     <!-- Prism.js CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet">
     <style>
         :root {
             --font-size: 15px;
@@ -198,50 +199,65 @@
             position: relative;
             background: #1e1e1e;
             border-radius: 12px;
-            padding: 20px 20px 20px 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.4);
-            margin: 10px 0;
-            overflow-x: auto;
+            margin: 12px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            overflow: hidden;
         }
-        .code-container pre {
-            margin: 0;
-            background: transparent !important;
-            padding: 0 !important;
-        }
-        .copy-icon {
+        .copy-wrapper {
             position: absolute;
-            top: 12px;
-            right: 12px;
-            background: #333;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 4px;
-            fill: #aaa;
-            transition: all 0.3s ease;
+            top: 8px;
+            right: 8px;
             z-index: 2;
         }
-        .copy-icon:hover {
-            fill: #fff;
+        .copy-btn {
+            background: #333;
+            border: none;
+            padding: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .copy-btn:hover {
             background: #444;
         }
-        .copy-icon:active {
-            transform: scale(0.95);
+        .copy-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        .copy-icon {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+            display: block;
         }
         .tooltip {
             position: absolute;
-            top: -25px;
-            right: 12px;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
             background: #444;
             color: #fff;
-            padding: 3px 8px;
-            border-radius: 5px;
+            padding: 4px 8px;
+            border-radius: 4px;
             font-size: 12px;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
-        .tooltip.show {
-            opacity: 1;
+        pre[class*="language-"] {
+            margin: 0 !important;
+            padding: 1.5em !important;
+            background: #1e1e1e !important;
+        }
+        .code-container pre code {
+            font-family: 'Fira Code', monospace !important;
+            font-size: 14px;
+        }
+        .line-numbers .line-numbers-rows {
+            border-right: 1px solid #333;
+            padding-right: 1em;
         }
         b, strong {
             font-weight: bold;
@@ -275,6 +291,7 @@
     <!-- Prism.js Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -288,7 +305,7 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // Handle Enter key (send on Enter, newline on Shift+Enter)
+            // Handle Enter key
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -327,8 +344,9 @@
                     hideLoading(loadingId);
                     addMessage(data.html, 'bot');
                     
-                    // Highlight any code blocks
+                    // Highlight code blocks and apply line numbers
                     Prism.highlightAll();
+                    Prism.plugins.lineNumbers.resize();
                     
                 } catch (error) {
                     console.error('Error:', error);
@@ -371,18 +389,17 @@
             }
 
             function copyCode(button) {
-                const codeBlock = button.parentElement.querySelector('code');
+                const codeBlock = button.closest('.code-container').querySelector('code');
                 const textToCopy = codeBlock ? codeBlock.textContent : '';
                 
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     const tooltip = document.createElement('div');
                     tooltip.className = 'tooltip show';
                     tooltip.textContent = 'Copied!';
-                    button.parentElement.appendChild(tooltip);
+                    button.appendChild(tooltip);
                     
                     setTimeout(() => {
-                        tooltip.classList.remove('show');
-                        setTimeout(() => tooltip.remove(), 300);
+                        tooltip.remove();
                     }, 1500);
                 });
             }
