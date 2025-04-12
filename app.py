@@ -38,14 +38,14 @@ def load_chat_history(chat_id):
             try:
                 return json.load(f)
             except json.JSONDecodeError:
-                return []
-    return []
+                return {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
+    return {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
 
-def save_chat_history(chat_id, chat_history):
+def save_chat_history(chat_id, chat_history_data):
     """Saves chat history for a specific chat ID."""
     filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
     with open(filepath, 'w') as f:
-        json.dump(chat_history, f, indent=4)
+        json.dump(chat_history_data, f, indent=4)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -79,17 +79,18 @@ def chat():
 
     user_name = user_info['name']
     chat_id = request.args.get('chat_id')
-    chat_history = []
+    chat_history_data = {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
     is_existing_chat = False
 
     if chat_id:
         if user_id in history_data and 'chats' in history_data[user_id] and chat_id in history_data[user_id]['chats']:
-            chat_history = load_chat_history(chat_id)
+            chat_history_data = load_chat_history(chat_id)
             is_existing_chat = True
         else:
             return "Unauthorized access to this chat." # Prevent accessing others' chats
     else:
         chat_id = str(uuid.uuid4()) # Generate a new chat ID
+        chat_history_data['created_at'] = datetime.datetime.now().isoformat()
 
     if request.method == 'POST':
         user_text = request.form['user_input']
@@ -106,12 +107,15 @@ def chat():
             ai_response = f"Error communicating with AI: {e}"
 
         # Save chat history
-        updated_chat_history = load_chat_history(current_chat_id)
-        updated_chat_history.append({'user': user_text, 'ai': ai_response})
-        save_chat_history(current_chat_id, updated_chat_history)
+        updated_chat_history_data = load_chat_history(current_chat_id)
+        if not updated_chat_history_data.get('messages'):
+            updated_chat_history_data['messages'] = []
+        updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
+        updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
+        save_chat_history(current_chat_id, updated_chat_history_data)
 
         # If this is the first message in a new chat, save the chat ID to history
-        if not is_existing_chat and updated_chat_history:
+        if not is_existing_chat and updated_chat_history_data['messages']:
             history_data = load_history()
             if user_id in history_data:
                 if 'chats' not in history_data[user_id]:
@@ -121,9 +125,9 @@ def chat():
                         history_data[user_id]['chats'].append(current_chat_id)
                 save_history(history_data)
 
-        return jsonify({'user': user_text, 'ai': ai_response})
+        return jsonify({'response': ai_response}) # Changed to match expected response in JS
 
-    return render_template('chat_combined.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history)
+    return render_template('chat_combined.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history_data.get('messages', []), created_at=chat_history_data.get('created_at'))
 
 @app.route('/new_chat')
 def new_chat():
@@ -142,12 +146,22 @@ def get_history():
     if not user_info or 'chats' not in user_info:
         return jsonify([])
 
-    chat_sessions = []
+    chat_sessions = {}
     for chat_id in user_info['chats']:
-        if os.path.exists(os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')):
-            chat_history = load_chat_history(chat_id)
-            if chat_history:
-                chat_sessions.append({'id': chat_id})
+        filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
+        if os.path.exists(filepath):
+            chat_data = load_chat_history(chat_id)
+            if chat_data and chat_data.get('messages'):
+                first_user_message = next((msg['content'] for msg in chat_data.get('messages', []) if msg['sender'] == 'user'), None)
+                title = "New Chat"
+                if first_user_message:
+                    title_words = first_user_message.split()[:4]
+                    title = " ".join(title_words)
+                chat_sessions[chat_id] = {
+                    'title': title,
+                    'message_count': len(chat_data.get('messages', [])),
+                    'created_at': chat_data.get('created_at', datetime.datetime.now().isoformat())
+                }
 
     return jsonify(chat_sessions)
 
