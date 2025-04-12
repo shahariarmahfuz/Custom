@@ -1,11 +1,342 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Welcome</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Echo AI - Welcome to the Future</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(45deg, #1a1a1a, #0d0d0d);
+            color: white;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 4rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(0);
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            background: linear-gradient(45deg, #00ff88, #61dafb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+            line-height: 1.2;
+        }
+
+        .tagline {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 3rem;
+            background: linear-gradient(45deg, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.6;
+        }
+
+        .auth-links {
+            display: flex;
+            gap: 2rem;
+            margin-top: 3rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .auth-link {
+            position: relative;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            text-decoration: none;
+            color: white;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .auth-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: 0.5s;
+        }
+
+        .auth-link:hover::before {
+            left: 100%;
+        }
+
+        .auth-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .floating-blobs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            filter: blur(60px);
+            z-index: 0;
+            overflow: hidden;
+            will-change: transform;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -50px) scale(1.1); }
+            50% { transform: translate(-50px, 80px) scale(0.9); }
+            75% { transform: translate(-80px, -100px) scale(1.2); }
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .feature {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .feature i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #00ff88, #61dafb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .feature p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .glass-panel {
+                padding: 2rem 1rem;
+                margin: 1rem;
+                width: 95%;
+                border-radius: 15px;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .tagline {
+                font-size: 1.1rem;
+                margin-bottom: 2rem;
+                padding: 0 0.5rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                margin-top: 2rem;
+            }
+
+            .auth-links {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+                margin-top: 2rem;
+            }
+
+            .auth-link {
+                width: 80%;
+                margin: 0 auto;
+                padding: 0.8rem;
+                font-size: 1rem;
+            }
+
+            .floating-blobs {
+                filter: blur(40px);
+            }
+
+            .blob {
+                animation-duration: 30s !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
+
+            .feature {
+                padding: 1rem;
+            }
+
+            .feature i {
+                font-size: 1.5rem !important;
+            }
+
+            .auth-link {
+                width: 90%;
+                min-width: auto;
+            }
+        }
+
+        /* Touch device specific styles */
+        .touch-device .auth-link:hover {
+            transform: none !important;
+            background: rgba(255,255,255,0.05);
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to our Chat App</h1>
-    <a href="/login"><button>Login</button></a>
-    <a href="/signup"><button>Sign Up</button></a>
+    <div class="floating-blobs">
+        <div class="blob" style="background: #00ff8855; width: 300px; height: 300px; top: 20%; left: 20%;"></div>
+        <div class="blob" style="background: #61dafb55; width: 250px; height: 250px; top: 50%; right: 20%;"></div>
+        <div class="blob" style="background: #ff00ff55; width: 200px; height: 200px; bottom: 20%; left: 45%;"></div>
+    </div>
+
+    <div class="container">
+        <div class="glass-panel">
+            <h1>Echo AI</h1>
+            <p class="tagline">Next Generation Artificial Intelligence Platform</p>
+            
+            <div class="features">
+                <div class="feature">
+                    <i class="fas fa-brain"></i>
+                    <h3>Deep Learning</h3>
+                    <p>Advanced neural networks architecture</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Real-time Processing</h3>
+                    <p>Instant analysis and response</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Secure & Private</h3>
+                    <p>Military-grade encryption</p>
+                </div>
+            </div>
+
+            <div class="auth-links">
+                <a href="/login" class="auth-link">
+                    <i class="fas fa-sign-in-alt"></i> Access Portal
+                </a>
+                <a href="/signup" class="auth-link">
+                    <i class="fas fa-user-plus"></i> Join Now
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detect touch device
+        if ('ontouchstart' in window || navigator.maxTouchPoints) {
+            document.body.classList.add('touch-device');
+        }
+
+        // Animated entrance effect
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('.glass-panel, .feature, .auth-link');
+            elements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+            });
+
+            setTimeout(() => {
+                elements.forEach((el, index) => {
+                    setTimeout(() => {
+                        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    }, index * 100);
+                });
+            }, 500);
+
+            // Floating blob animation
+            const blobs = document.querySelectorAll('.blob');
+            blobs.forEach(blob => {
+                const duration = 20 + Math.random() * 10;
+                blob.style.animation = `float ${duration}s infinite linear`;
+            });
+        });
+
+        // Prevent zooming on mobile
+        document.addEventListener('touchmove', function(event) {
+            if (event.scale !== 1) { event.preventDefault(); }
+        }, { passive: false });
+    </script>
 </body>
 </html>
