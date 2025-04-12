@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mobile Chat Interface</title>
     <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
+        /* Existing CSS remains the same */
         :root {
             --font-size: 15px;
             --input-height: 50px;
@@ -106,6 +108,16 @@
             word-break: break-word;
             font-family: var(--main-font); /* Ensure font consistency */
             white-space: pre-wrap; /* Preserve whitespace and line breaks */
+        }
+        .reply-message pre {
+            background-color: #2F3336; /* Background for code block */
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto; /* Enable horizontal scrolling for long code */
+            font-family: monospace; /* Use a monospace font for code */
+            font-size: 0.9em;
+            white-space: pre-wrap; /* Preserve line breaks */
         }
         .input-area {
             padding: 8px 16px;
@@ -228,6 +240,7 @@
         </div>
         <button onclick="sendMessage()">&#x27A2;</button> </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         const textarea = document.getElementById('messageInput');
         const messageArea = document.getElementById('messageArea');
@@ -287,22 +300,16 @@
                     const reply = data.response;
                     const replyMsg = document.createElement('div');
                     replyMsg.className = 'reply-message';
-
-                    // Check if the reply is a code block
-                    const codeMatch = reply.match(/^```html\n([\s\S]*)\n```$/);
-                    if (codeMatch) {
-                        const codeContent = codeMatch[1];
-                        const preElement = document.createElement('pre');
-                        const codeElement = document.createElement('code');
-                        codeElement.textContent = codeContent;
-                        preElement.appendChild(codeElement);
-                        replyMsg.appendChild(preElement);
-                    } else {
-                        replyMsg.innerHTML = reply; // Set as innerHTML to handle basic HTML
-                    }
+                    replyMsg.innerHTML = reply; // Set as innerHTML to handle code blocks and other formatting
 
                     messageArea.appendChild(replyMsg);
                     messageArea.scrollTop = messageArea.scrollHeight;
+
+                    // Highlight code blocks after adding to the DOM
+                    const codeBlocks = replyMsg.querySelectorAll('pre code');
+                    codeBlocks.forEach(block => {
+                        hljs.highlightElement(block);
+                    });
                 })
                 .catch(error => {
                     console.error('Error sending message:', error);
