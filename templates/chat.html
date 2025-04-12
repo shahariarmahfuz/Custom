@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat History</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        li:hover {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h2>Chat History</h2>
+    <ul>
+        {% for session in chat_sessions %}
+            <li><a href="/chat?chat_id={{ session.id }}" target="_parent">{{ session.id }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
