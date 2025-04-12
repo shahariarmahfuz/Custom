@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+        }
+
+        #chat_container {
+            flex-grow: 1;
+            padding: 10px;
+        }
+
+        #history_sidebar {
+            width: 0; /* Initially hidden */
+            background-color: #f8f8f8;
+            border-left: 1px solid #ccc;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px; /* Adjust if needed for header */
+            position: fixed;
+            height: 100%;
+            left: 0;
+            top: 0;
+        }
+
+        #history_sidebar h2 {
+            padding-left: 20px;
+        }
+
+        #history_list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #history_list li {
+            padding: 8px 16px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        #history_list li:hover {
+            background-color: #ddd;
+        }
+
+        #main_content {
+            transition: margin-left .5s;
+            padding: 16px;
+        }
+
+        .openbtn {
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            color: black;
+            padding: 10px 15px;
+            border: none;
+        }
+
+        .openbtn:hover {
+            background-color:#ccc;
+        }
+    </style>
+    <script>
+        let historySidebar = null;
+        let mainContent = null;
+
+        function openHistory() {
+            if (!historySidebar) {
+                historySidebar = document.getElementById("history_sidebar");
+                mainContent = document.getElementById("main_content");
+            }
+            historySidebar.style.width = "250px";
+            mainContent.style.marginLeft = "250px";
+            loadHistory();
+        }
+
+        function closeHistory() {
+            if (!historySidebar) return;
+            historySidebar.style.width = "0";
+            mainContent.style.marginLeft= "0";
+        }
+
+        function loadHistory() {
+            fetch('/get_history')
+                .then(response => response.json())
+                .then(data => {
+                    const historyList = document.getElementById('history_list');
+                    historyList.innerHTML = ''; // Clear previous history
+                    data.forEach(session => {
+                        const listItem = document.createElement('li');
+                        const link = document.createElement('a');
+                        link.href = `/chat?chat_id=${session.id}`;
+                        link.textContent = session.id;
+                        listItem.appendChild(link);
+                        historyList.appendChild(listItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching history:', error));
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('user_input');
+            const chatArea = document.getElementById('chat_area');
+            const chatId = document.getElementById('chat_id').value;
+            const message = userInput.value.trim();
+
+            if (message) {
+                // Display user message immediately
+                chatArea.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
+                userInput.value = ''; // Clear input field
+
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `user_input=${encodeURIComponent(message)}&chat_id=${encodeURIComponent(chatId)}`,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatArea.innerHTML += `<p><strong>AI:</strong> ${data.ai}</p>`;
+                    chatArea.scrollTop = chatArea.scrollHeight; // Scroll to bottom
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    chatArea.innerHTML += `<p style="color: red;">Error sending message.</p>`;
+                });
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="history_sidebar">
+        <h2>Chat History</h2>
+        <ul id="history_list">
+            </ul>
+        <a href="javascript:void(0)" onclick="closeHistory()"
+           style="position: absolute; top: 20px; right: 25px; font-size: 30px; margin-left: 50px;">&times;</a>
+    </div>
+
+    <div id="main_content">
+        <h1>Chatting as {{ user_name }}</h1>
+        <input type="hidden" id="chat_id" value="{{ chat_id }}">
+
+        <div>
+            <button class="openbtn" onclick="openHistory()">History</button>
+            <button onclick="window.location.href='/new_chat'">New Chat</button>
+            <button onclick="window.location.href='/logout'">Logout</button>
+        </div>
+
+        <div id="chat_area" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; margin-top: 10px;">
+            {% for message in chat_history %}
+                {% if 'user' in message %}
+                    <p><strong>You:</strong> {{ message.user }}</p>
+                {% endif %}
+                {% if 'ai' in message %}
+                    <p><strong>AI:</strong> {{ message.ai }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 10px;">
+            <input type="text" id="user_input" style="width: 80%;">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+</body>
+</html>
