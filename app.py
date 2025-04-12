@@ -6,7 +6,6 @@ import uuid
 import requests
 import hashlib
 import re
-import html  # Import the html module
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
@@ -59,32 +58,8 @@ def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
-def process_ai_response(text):
-    parts = re.split(r'(```[\s\S]*?```)', text)
-    processed_parts = []
-
-    for part in parts:
-        if part.startswith('```') and part.endswith('```'):
-            lang_match = re.match(r'```(\w+)?', part)
-            language = lang_match.group(1) if lang_match else ''
-            code_content = part[len(language)+3:-3].strip()
-            processed_parts.append(format_code_block(code_content, language))
-        else:
-            processed_parts.append(format_text(part))
-
-    return ''.join(processed_parts)
-
-def format_code_block(code, language=''):
-    escaped_code = html.escape(code)
-    language_class = f'language-{language}' if language else ''
-
-    return f'''
-    <div class="code-container">
-        <pre class="{language_class}"><code>{escaped_code}</code></pre>
-    </div>
-    '''
-
-def format_text(text):
+def text_formatter(text):
+    """Formats text with bold, italic, list, and line breaks."""
     text = re.sub(r'\*\s+\*\*(.*?)\*\*', r'<li><b>\1</b></li>', text)
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'\*(?!\s)(.*?)\*', r'<i>\1</i>', text)
@@ -100,7 +75,6 @@ def home():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     """Handles user signup."""
-    # ... (rest of the signup route remains the same)
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
@@ -156,7 +130,6 @@ def signup():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Handles user login."""
-    # ... (rest of the login route remains the same)
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '').strip()
@@ -223,16 +196,15 @@ def chat():
         current_chat_id = request.form['chat_id']
 
         # Send message to AI API
-        api_url = f"[https://nekosite.ddns.net/ai?q=](https://nekosite.ddns.net/ai?q=){user_text}&id={current_chat_id}"
+        api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={current_chat_id}"
         try:
             response = requests.get(api_url)
             response.raise_for_status()
             ai_response_data = response.json()
             ai_response = ai_response_data.get('response', 'No response from AI.')
-            # Format the AI response
-            formatted_ai_response = process_ai_response(ai_response)
+            formatted_response = text_formatter(ai_response)
         except requests.exceptions.RequestException as e:
-            formatted_ai_response = f"Error communicating with AI: {e}"
+            formatted_response = f"Error communicating with AI: {e}"
 
         # Save chat history
         updated_chat_history_data = load_chat_history(current_chat_id)
@@ -240,7 +212,7 @@ def chat():
             updated_chat_history_data['messages'] = []
 
         updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
-        updated_chat_history_data['messages'].append({'sender': 'ai', 'content': formatted_ai_response})
+        updated_chat_history_data['messages'].append({'sender': 'ai', 'content': formatted_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
 
         # If this is the first message in a new chat, save the chat ID to user's history
@@ -254,7 +226,7 @@ def chat():
                         users[session['email']]['chats'].append(current_chat_id)
                 save_users(users)
 
-        return jsonify({'response': formatted_ai_response})
+        return jsonify({'response': formatted_response})
 
     return render_template('chat_combined.html',
                          user_name=user_name,
@@ -327,4 +299,3 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
