@@ -1,10 +1,224 @@
 <!DOCTYPE html>
-<html>
+<html lang="bn">
 <head>
-    <title>Sign Up</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Echo</title>
+    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-55?styles=30130" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .logo-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1.logo {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(135deg, #64b5f6 0%, #007bff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-family: 'Montserrat', 'Helvetica Neue', sans-serif;
+            letter-spacing: 1.5px;
+            position: relative;
+            display: inline-block;
+        }
+
+        h1.logo::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #64b5f6, #007bff);
+            border-radius: 3px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #fff;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        form {
+            width: 90%;
+            max-width: 400px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 15px;
+            color: #ccc;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            background-color: #212121;
+            border: 1px solid #424242;
+            color: #fff;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: #64b5f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2);
+        }
+
+        input[type="submit"] {
+            margin-top: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        a {
+            color: #64b5f6;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s ease;
+            font-size: 15px;
+        }
+
+        a:hover {
+            color: #fff;
+            border-bottom-color: #64b5f6;
+        }
+
+        .alert {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            font-size: 14px;
+            border-radius: 5px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .alert.alert-success {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .alert.alert-danger {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+
+        p {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 15px;
+            color: #ccc;
+        }
+
+        @media (min-width: 600px) {
+            body {
+                padding: 60px 20px;
+            }
+
+            .logo-container {
+                margin-bottom: 40px;
+            }
+
+            h1.logo {
+                font-size: 56px;
+                letter-spacing: 2px;
+            }
+
+            .page-title {
+                font-size: 28px;
+                margin-bottom: 40px;
+            }
+
+            form {
+                width: 400px;
+                margin-bottom: 40px;
+            }
+
+            label {
+                font-size: 16px;
+            }
+
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="submit"] {
+                padding: 16px;
+                font-size: 16px;
+            }
+
+            a {
+                font-size: 16px;
+            }
+
+            .alert {
+                font-size: 16px;
+                padding: 14px;
+            }
+
+            p {
+                font-size: 16px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Create Account</h1>
+    <div class="logo-container">
+        <h1 class="logo">ECHO</h1>
+    </div>
+
+    <h2 class="page-title">Create Account</h2>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -12,19 +226,36 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+
     <form method="POST" action="/signup">
-        <label>First Name:</label><br>
-        <input type="text" name="first_name" required><br>
-        <label>Last Name:</label><br>
-        <input type="text" name="last_name" required><br>
-        <label>Email:</label><br>
-        <input type="email" name="email" required><br>
-        <label>Password:</label><br>
-        <input type="password" name="password" minlength="8" required><br>
-        <label>Confirm Password:</label><br>
-        <input type="password" name="confirm_password" minlength="8" required><br><br>
+        <div class="form-group">
+            <label for="first_name">First Name:</label>
+            <input type="text" id="first_name" name="first_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="last_name">Last Name:</label>
+            <input type="text" id="last_name" name="last_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password (min 8 characters):</label>
+            <input type="password" id="password" name="password" minlength="8" required>
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password:</label>
+            <input type="password" id="confirm_password" name="confirm_password" minlength="8" required>
+        </div>
+
         <input type="submit" value="Sign Up">
     </form>
+
     <p>Already have an account? <a href="/login">Login</a></p>
 </body>
-</html>
+                    </html>
