@@ -1,229 +1,286 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Echo</title>
-    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-55?styles=30130" rel="stylesheet">
-    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login - Echo AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
+        * {
             margin: 0;
-            padding: 40px 20px;
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: 'Helvetica Neue', sans-serif;
-            line-height: 1.6;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(45deg, #1a1a1a, #0d0d0d);
+            color: white;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .floating-blobs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            filter: blur(60px);
+            z-index: 0;
+            overflow: hidden;
+            will-change: transform;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -50px) scale(1.1); }
+            50% { transform: translate(-50px, 80px) scale(0.9); }
+            75% { transform: translate(-80px, -100px) scale(1.2); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-
-        .logo-container {
-            margin-bottom: 40px;
             text-align: center;
-        }
-
-        h1.logo {
-            font-size: 48px;
-            font-weight: 700;
-            margin: 0;
-            background: linear-gradient(135deg, #64b5f6 0%, #007bff 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            font-family: 'Montserrat', 'Helvetica Neue', sans-serif;
-            letter-spacing: 1.5px;
             position: relative;
-            display: inline-block;
+            z-index: 1;
         }
 
-        h1.logo::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 0;
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(0);
+            transition: all 0.3s ease;
             width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, #64b5f6, #007bff);
-            border-radius: 3px;
+            max-width: 500px;
         }
 
-        form {
-            width: 90%;
-            max-width: 400px;
-            margin-bottom: 30px;
+        h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(45deg, #00ff88, #61dafb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+            line-height: 1.2;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2.5rem;
+            background: linear-gradient(45deg, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.6;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 1.5rem;
+            text-align: left;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 15px;
-            color: #ccc;
-        }
-
-        input[type="email"],
-        input[type="password"],
-        input[type="submit"] {
-            width: 100%;
-            padding: 14px;
-            box-sizing: border-box;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: all 0.2s ease;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
         }
 
         input[type="email"],
         input[type="password"] {
-            background-color: #212121;
-            border: 1px solid #424242;
-            color: #fff;
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
         }
 
         input[type="email"]:focus,
         input[type="password"]:focus {
-            border-color: #64b5f6;
             outline: none;
-            box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2);
+            border-color: #00ff88;
+            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
         }
 
-        input[type="submit"] {
-            margin-top: 10px;
-            background-color: #007bff;
-            color: #fff;
+        .auth-link {
+            display: inline-block;
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(45deg, #00ff88, #61dafb);
+            color: #111;
             border: none;
-            font-weight: 500;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-        }
-
-        input[type="submit"]:hover {
-            background-color: #0056b3;
-        }
-
-        a {
-            color: #64b5f6;
+            transition: all 0.3s ease;
+            text-align: center;
             text-decoration: none;
-            border-bottom: 1px solid transparent;
-            transition: all 0.2s ease;
-            font-size: 15px;
+            margin-top: 0.5rem;
         }
 
-        a:hover {
-            color: #fff;
-            border-bottom-color: #64b5f6;
+        .auth-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .bottom-text {
+            margin-top: 1.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+        }
+
+        .bottom-text a {
+            color: #61dafb;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .bottom-text a:hover {
+            color: #00ff88;
+            text-decoration: underline;
         }
 
         .alert {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 12px;
-            font-size: 14px;
-            border-radius: 5px;
-            width: 90%;
-            max-width: 400px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
         }
 
-        .alert.alert-success {
-            background-color: rgba(76, 175, 80, 0.2);
+        .alert-success {
+            background-color: rgba(76, 175, 80, 0.15);
             color: #4CAF50;
-            border: 1px solid #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
         }
 
-        .alert.alert-danger {
-            background-color: rgba(244, 67, 54, 0.2);
+        .alert-danger {
+            background-color: rgba(244, 67, 54, 0.15);
             color: #f44336;
-            border: 1px solid #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
         }
 
-        p {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 15px;
-            color: #ccc;
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .glass-panel {
+                padding: 2rem 1.5rem;
+                border-radius: 15px;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
         }
 
-        @media (min-width: 600px) {
-            body {
-                padding: 80px 20px;
+        @media (max-width: 480px) {
+            .glass-panel {
+                padding: 1.5rem 1rem;
             }
 
-            .logo-container {
-                margin-bottom: 50px;
-            }
-
-            h1.logo {
-                font-size: 56px;
-                letter-spacing: 2px;
-            }
-
-            form {
-                width: 400px;
-                margin-bottom: 40px;
-            }
-
-            label {
-                font-size: 16px;
+            h1 {
+                font-size: 2rem;
             }
 
             input[type="email"],
             input[type="password"],
-            input[type="submit"] {
-                padding: 16px;
-                font-size: 16px;
-            }
-
-            a {
-                font-size: 16px;
-            }
-
-            .alert {
-                font-size: 16px;
-                padding: 14px;
-            }
-
-            p {
-                font-size: 16px;
+            .auth-link {
+                padding: 0.8rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="logo-container">
-        <h1 class="logo">ECHO</h1>
+    <div class="floating-blobs">
+        <div class="blob" style="background: #00ff8855; width: 300px; height: 300px; top: 20%; left: 20%;"></div>
+        <div class="blob" style="background: #61dafb55; width: 250px; height: 250px; top: 50%; right: 20%;"></div>
+        <div class="blob" style="background: #ff00ff55; width: 200px; height: 200px; bottom: 20%; left: 45%;"></div>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <div class="container">
+        <div class="glass-panel">
+            <h1>Echo AI</h1>
+            <p class="tagline">Sign in to your account</p>
 
-    <form method="POST" action="/login">
-        <div class="form-group">
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/login">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <button type="submit" class="auth-link">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+
+            <p class="bottom-text">
+                Don't have an account? <a href="/signup">Create one</a>
+            </p>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
-        </div>
+    <script>
+        // Floating blob animation
+        const blobs = document.querySelectorAll('.blob');
+        blobs.forEach(blob => {
+            const duration = 20 + Math.random() * 10;
+            blob.style.animation = `float ${duration}s infinite linear`;
+        });
 
-        <input type="submit" value="Login">
-    </form>
-
-    <p>
-        Don't have an account? <a href="/signup">Sign Up</a>
-    </p>
+        // Animated entrance effect
+        document.addEventListener('DOMContentLoaded', () => {
+            const glassPanel = document.querySelector('.glass-panel');
+            glassPanel.style.opacity = '0';
+            glassPanel.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                glassPanel.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                glassPanel.style.opacity = '1';
+                glassPanel.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    </script>
 </body>
 </html>
