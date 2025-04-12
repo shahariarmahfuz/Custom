@@ -55,7 +55,7 @@ def index():
         user_id = request.form['user_id']
         history_data = load_history()
         if user_id not in history_data:
-            history_data[user_id] = {'name': name, 'last_login': datetime.datetime.now().isoformat(), 'chats': []}
+            history_data[user_id] = {'name': name, 'full_name': name, 'last_login': datetime.datetime.now().isoformat(), 'chats': []} # Added full_name (can be adjusted)
         else:
             history_data[user_id]['last_login'] = datetime.datetime.now().isoformat()
         save_history(history_data)
@@ -142,14 +142,30 @@ def get_history():
 
     chat_sessions = []
     for chat_id in user_info['chats']:
-        # You might want to add some logic here to check if the chat file actually exists
-        # and has any content before including it in the history.
         if os.path.exists(os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')):
             chat_history = load_chat_history(chat_id)
-            if chat_history:  # Only show if there's chat history
+            if chat_history:
                 chat_sessions.append({'id': chat_id})
 
     return jsonify(chat_sessions)
+
+@app.route('/account')
+def account():
+    """Displays the user's account information and logout option."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('index'))
+
+    history_data = load_history()
+    user_info = history_data.get(user_id)
+    if not user_info:
+        return redirect(url_for('index'))
+
+    name = user_info.get('name')
+    full_name = user_info.get('full_name')
+    user_id_display = user_id
+
+    return render_template('account.html', name=name, full_name=full_name, user_id=user_id_display)
 
 @app.route('/logout')
 def logout():
@@ -159,3 +175,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+    
