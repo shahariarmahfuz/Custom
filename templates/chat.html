@@ -1,31 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat History</title>
-    <style>
-        body {
-            font-family: sans-serif;
+    <title>Chat</title>
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById('user_input');
+            const chatArea = document.getElementById('chat_area');
+            const chatId = document.getElementById('chat_id').value;
+            const message = userInput.value.trim();
+
+            if (message) {
+                // Display user message immediately
+                chatArea.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
+                userInput.value = ''; // Clear input field
+
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `user_input=${encodeURIComponent(message)}&chat_id=${encodeURIComponent(chatId)}`,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatArea.innerHTML += `<p><strong>AI:</strong> ${data.ai}</p>`;
+                    chatArea.scrollTop = chatArea.scrollHeight; // Scroll to bottom
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    chatArea.innerHTML += `<p style="color: red;">Error sending message.</p>`;
+                });
+            }
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
+
+        function loadHistory() {
+            window.open('/history', '_blank', 'width=300,height=500,resizable=yes,scrollbars=yes');
         }
-        li {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        li:hover {
-            background-color: #f9f9f9;
-        }
-    </style>
+    </script>
 </head>
 <body>
-    <h2>Chat History</h2>
-    <ul>
-        {% for session in chat_sessions %}
-            <li><a href="/chat?chat_id={{ session.id }}" target="_parent">{{ session.id }}</a></li>
+    <h1>Chatting as {{ user_name }}</h1>
+    <input type="hidden" id="chat_id" value="{{ chat_id }}">
+
+    <div>
+        <button onclick="loadHistory()">History</button>
+        <button onclick="window.location.href='/new_chat'">New Chat</button>
+    </div>
+
+    <div id="chat_area" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; margin-top: 10px;">
+        {% for message in chat_history %}
+            {% if 'user' in message %}
+                <p><strong>You:</strong> {{ message.user }}</p>
+            {% endif %}
+            {% if 'ai' in message %}
+                <p><strong>AI:</strong> {{ message.ai }}</p>
+            {% endif %}
         {% endfor %}
-    </ul>
+    </div>
+
+    <div style="margin-top: 10px;">
+        <input type="text" id="user_input" style="width: 80%;">
+        <button onclick="sendMessage()">Send</button>
+    </div>
 </body>
 </html>
