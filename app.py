@@ -1,22 +1,24 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
 import json
 import os
 import datetime
 import uuid
 import requests
+import hashlib
+import re
 
 app = Flask(__name__)
-app.secret_key = 'os_keda_bara'  # Important for session management
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
 
-HISTORY_FILE = 'history.json'
+HISTORY_FILE = 'users.json'
 CHAT_HISTORY_DIR = 'chat_history'
 
-# Ensure chat history directory exists
+# Ensure directories exist
 if not os.path.exists(CHAT_HISTORY_DIR):
     os.makedirs(CHAT_HISTORY_DIR)
 
-def load_history():
-    """Loads user history from the JSON file."""
+def load_users():
+    """Loads users data from JSON file."""
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, 'r') as f:
             try:
@@ -25,10 +27,10 @@ def load_history():
                 return {}
     return {}
 
-def save_history(history_data):
-    """Saves user history to the JSON file."""
+def save_users(users_data):
+    """Saves users data to JSON file."""
     with open(HISTORY_FILE, 'w') as f:
-        json.dump(history_data, f, indent=4)
+        json.dump(users_data, f, indent=4)
 
 def load_chat_history(chat_id):
     """Loads chat history for a specific chat ID."""
@@ -47,64 +49,130 @@ def save_chat_history(chat_id, chat_history_data):
     with open(filepath, 'w') as f:
         json.dump(chat_history_data, f, indent=4)
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    """Handles the initial login page."""
+def hash_password(password):
+    """Hashes password using SHA-256."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def is_valid_email(email):
+    """Basic email validation."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+@app.route('/')
+def home():
+    """Home page with login/signup options."""
+    return render_template('home.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    """Handles user signup."""
     if request.method == 'POST':
-        name = request.form['name']
-        user_id = request.form['user_id'].strip()
-        
-        if not name or not user_id:
-            return render_template('index.html', error="Name and User ID are required")
-        
-        history_data = load_history()
-        
-        # Clear any existing session
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        # Validate inputs
+        if not all([first_name, last_name, email, password, confirm_password]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('signup'))
+
+        if not is_valid_email(email):
+            flash('Please enter a valid email address', 'error')
+            return redirect(url_for('signup'))
+
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return redirect(url_for('signup'))
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters', 'error')
+            return redirect(url_for('signup'))
+
+        users = load_users()
+
+        # Check if email already exists
+        if email in users:
+            flash('Email already registered. Please login instead.', 'error')
+            return redirect(url_for('login'))
+
+        # Generate unique user ID
+        user_id = str(uuid.uuid4())
+
+        # Create user account
+        users[email] = {
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'full_name': f"{first_name} {last_name}",
+            'password_hash': hash_password(password),
+            'created_at': datetime.datetime.now().isoformat(),
+            'last_login': None,
+            'chats': []
+        }
+
+        save_users(users)
+        flash('Account created successfully! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Handles user login."""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+
+        if not email or not password:
+            flash('Email and password are required', 'error')
+            return redirect(url_for('login'))
+
+        users = load_users()
+        user = users.get(email)
+
+        if not user:
+            flash('Invalid email or password', 'error')
+            return redirect(url_for('login'))
+
+        if user['password_hash'] != hash_password(password):
+            flash('Invalid email or password', 'error')
+            return redirect(url_for('login'))
+
+        # Update last login time
+        user['last_login'] = datetime.datetime.now().isoformat()
+        save_users(users)
+
+        # Set session
         session.clear()
-        
-        # Create or update user info
-        if user_id not in history_data:
-            history_data[user_id] = {
-                'name': name,
-                'full_name': name,
-                'last_login': datetime.datetime.now().isoformat(),
-                'chats': []
-            }
-        else:
-            # Update last login time and name if changed
-            history_data[user_id]['last_login'] = datetime.datetime.now().isoformat()
-            history_data[user_id]['name'] = name
-            if 'full_name' not in history_data[user_id]:
-                history_data[user_id]['full_name'] = name
-        
-        save_history(history_data)
-        
-        # Set new session
-        session['user_id'] = user_id
-        session['user_name'] = name
+        session['user_id'] = user['user_id']
+        session['email'] = email
+        session['user_name'] = user['first_name']
+
         return redirect(url_for('chat'))
-    
-    return render_template('index.html')
+
+    return render_template('login.html')
 
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
-    """Handles the main chat page."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
+    """Main chat page."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
 
-    history_data = load_history()
-    user_info = history_data.get(user_id)
-    if not user_info:
-        return redirect(url_for('index'))
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
 
-    user_name = user_info.get('name', 'User')
+    user_name = user['first_name']
     chat_id = request.args.get('chat_id')
     chat_history_data = {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
     is_existing_chat = False
 
     if chat_id:
-        if user_id in history_data and 'chats' in history_data[user_id] and chat_id in history_data[user_id]['chats']:
+        if chat_id in user['chats']:
             chat_history_data = load_chat_history(chat_id)
             is_existing_chat = True
         else:
@@ -137,16 +205,16 @@ def chat():
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
 
-        # If this is the first message in a new chat, save the chat ID to history
+        # If this is the first message in a new chat, save the chat ID to user's history
         if not is_existing_chat and updated_chat_history_data['messages']:
-            history_data = load_history()
-            if user_id in history_data:
-                if 'chats' not in history_data[user_id]:
-                    history_data[user_id]['chats'] = [current_chat_id]
+            users = load_users()
+            if session['email'] in users:
+                if 'chats' not in users[session['email']]:
+                    users[session['email']]['chats'] = [current_chat_id]
                 else:
-                    if current_chat_id not in history_data[user_id]['chats']:
-                        history_data[user_id]['chats'].append(current_chat_id)
-                save_history(history_data)
+                    if current_chat_id not in users[session['email']]['chats']:
+                        users[session['email']]['chats'].append(current_chat_id)
+                save_users(users)
 
         return jsonify({'response': ai_response})
 
@@ -159,24 +227,23 @@ def chat():
 @app.route('/new_chat')
 def new_chat():
     """Redirects to a new chat session."""
-    if not session.get('user_id'):
-        return redirect(url_for('index'))
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     return redirect(url_for('chat'))
 
 @app.route('/get_history')
 def get_history():
     """Returns the chat history for the logged-in user as JSON."""
-    user_id = session.get('user_id')
-    if not user_id:
+    if 'user_id' not in session:
         return jsonify([])
 
-    history_data = load_history()
-    user_info = history_data.get(user_id)
-    if not user_info or 'chats' not in user_info:
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user or 'chats' not in user:
         return jsonify([])
 
     chat_sessions = {}
-    for chat_id in user_info['chats']:
+    for chat_id in user['chats']:
         filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
         if os.path.exists(filepath):
             chat_data = load_chat_history(chat_id)
@@ -196,30 +263,29 @@ def get_history():
 
 @app.route('/account')
 def account():
-    """Displays the user's account information and logout option."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
+    """Displays the user's account information."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
 
-    history_data = load_history()
-    user_info = history_data.get(user_id)
-    if not user_info:
-        return redirect(url_for('index'))
-
-    name = user_info.get('name', '')
-    full_name = user_info.get('full_name', name)
-    user_id_display = user_id  # Display the actual logged-in user's ID
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
 
     return render_template('account.html', 
-                         name=name, 
-                         full_name=full_name, 
-                         user_id=user_id_display)
+                         first_name=user['first_name'],
+                         last_name=user['last_name'],
+                         full_name=user['full_name'],
+                         email=session['email'],
+                         user_id=user['user_id'],
+                         created_at=user['created_at'])
 
 @app.route('/logout')
 def logout():
-    """Logs the user out by clearing the session."""
+    """Logs the user out."""
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
