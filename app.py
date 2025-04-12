@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, render_template, request, jsonify
 import requests
 import uuid
 import re
@@ -6,49 +6,48 @@ import re
 app = Flask(__name__)
 
 @app.route('/customer')
-def customer_page():
+def customer():
     return render_template('customer.html')
 
 @app.route('/send_message', methods=['POST'])
-def send_message():
-    data = request.get_json()
-    user_msg = data.get('message')
-    if not user_msg:
-        return jsonify({"error": "Message is required"}), 400
-
-    unique_id = uuid.uuid4()
+def handle_message():
+    user_msg = request.form.get('message', '')
+    unique_id = str(uuid.uuid4())
+    
+    # নেকো সাইটে রিকোয়েস্ট পাঠানো
     api_url = f"https://nekosite.ddns.net/ai?q={user_msg}&id={unique_id}"
-
     try:
-        response = requests.get(api_url)
-        response.raise_for_status()  # Raise an exception for bad status codes
-        api_data = response.json()
-        bot_response = api_data.get('response', '')
-
-        processed_response = bot_response.replace('<b>', '<strong>').replace('</b>', '</strong>')
-        processed_response = processed_response.replace('<i>', '<em>').replace('</i>', '</em>')
-        processed_response = processed_response.replace('\n', '<br>')
-
-        # Handle Markdown-style bold and italic
-        processed_response = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', processed_response)
-        processed_response = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', processed_response)
-        processed_response = re.sub(r'_([^_]+)_', r'<em>\1</em>', processed_response) # Handle underscore italics
-
-        # Handle code blocks
-        code_match = re.search(r'```(.*)\n([\s\S]*)\n```', processed_response)
-        if code_match:
-            language = code_match.group(1).strip()
-            code_content = code_match.group(2)
-            code_block = f'<pre><code class="{language}">{code_content.strip()}</code></pre>'
-            processed_response = re.sub(r'```.*\n[\s\S]*\n```', code_block, processed_response)
-
-        return jsonify({"response": processed_response})
-
-    except requests.exceptions.RequestException as e:
-        return jsonify({"response": f"Error communicating with the AI service: {e}"}), 500
+        response = requests.get(api_url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        ai_response = data.get('response', '')
+        
+        # রেসপন্স প্রসেসিং
+        processed_html = process_ai_response(ai_response)
+        return jsonify({'html': processed_html})
+        
     except Exception as e:
-        return jsonify({"response": f"An unexpected error occurred: {e}"}), 500
+        return jsonify({'html': f'Error: {str(e)}'})
+
+def process_ai_response(text):
+    # এইচটিএমএল কোড ব্লক প্রসেসিং
+    code_blocks = re.findall(r'```html(.*?)```', text, re.DOTALL)
+    text_parts = re.split(r'```html.*?```', text, flags=re.DOTALL)
+    
+    processed = []
+    for i, part in enumerate(text_parts):
+        part = part.strip()
+        if part:
+            # মার্কডাউন ফরম্যাটিং
+            part = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', part)
+            part = re.sub(r'\*(.*?)\*', r'<i>\1</i>', part)
+            processed.append(part)
+        if i < len(code_blocks):
+            # কোড ব্লক যোগ করুন
+            code = code_blocks[i].strip()
+            processed.append(f'<div class="code-output">{code}</div>')
+    
+    return ''.join(processed)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-    
+    app.run(host='0.0.0.0', port=5000, debug=True)
