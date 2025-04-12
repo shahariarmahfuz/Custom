@@ -430,7 +430,7 @@
                     <div class="user-message">{{ message.content }}</div>
                 </div>
             {% elif message.sender == 'ai' %}
-                <div class="reply-message">{{ message.content }}</div>
+                <div class="reply-message">{{ message.content|safe }}</div>
             {% endif %}
         {% endfor %}
     </div>
