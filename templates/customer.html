@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Chat Interface</title>
     <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
+    <!-- Prism.js CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
     <style>
         :root {
             --font-size: 15px;
@@ -69,14 +71,6 @@
             -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
-        }
-        .b-message {
-            padding: 8px 0;
-            font-size: var(--font-size);
-            line-height: 1.4;
-            word-break: break-word;
-            font-family: var(--main-font);
-            white-space: pre-wrap;
         }
         .user-message-container {
             display: flex;
@@ -211,25 +205,28 @@
         }
         .code-container pre {
             margin: 0;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #dcdcdc;
-            white-space: pre-wrap;
-            font-family: monospace;
+            background: transparent !important;
+            padding: 0 !important;
         }
         .copy-icon {
             position: absolute;
             top: 12px;
             right: 12px;
-            background: transparent;
+            background: #333;
             border: none;
             cursor: pointer;
             padding: 5px;
+            border-radius: 4px;
             fill: #aaa;
-            transition: fill 0.3s ease;
+            transition: all 0.3s ease;
+            z-index: 2;
         }
         .copy-icon:hover {
             fill: #fff;
+            background: #444;
+        }
+        .copy-icon:active {
+            transform: scale(0.95);
         }
         .tooltip {
             position: absolute;
@@ -274,6 +271,10 @@
         </div>
         <button id="sendButton">➜</button>
     </div>
+
+    <!-- Prism.js Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -326,6 +327,9 @@
                     hideLoading(loadingId);
                     addMessage(data.html, 'bot');
                     
+                    // Highlight any code blocks
+                    Prism.highlightAll();
+                    
                 } catch (error) {
                     console.error('Error:', error);
                     hideLoading(loadingId);
@@ -366,12 +370,20 @@
                 }
             }
 
-            function copyCode(tooltipId, button) {
-                const codeBlock = button.parentElement.querySelector('pre');
-                navigator.clipboard.writeText(codeBlock.textContent).then(() => {
-                    const tooltip = document.getElementById(tooltipId);
-                    tooltip.classList.add("show");
-                    setTimeout(() => tooltip.classList.remove("show"), 1500);
+            function copyCode(button) {
+                const codeBlock = button.parentElement.querySelector('code');
+                const textToCopy = codeBlock ? codeBlock.textContent : '';
+                
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip show';
+                    tooltip.textContent = 'Copied!';
+                    button.parentElement.appendChild(tooltip);
+                    
+                    setTimeout(() => {
+                        tooltip.classList.remove('show');
+                        setTimeout(() => tooltip.remove(), 300);
+                    }, 1500);
                 });
             }
         });
