@@ -117,32 +117,30 @@ def chat():
             return "Unauthorized access to this chat." # Prevent accessing others' chats
         chat_history = load_chat_history(chat_id)
 
-    return render_template('chat.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history)
+    return render_template('chat_combined.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history)
 
 @app.route('/new_chat')
 def new_chat():
     """Redirects to a new chat session."""
     return redirect(url_for('chat'))
 
-@app.route('/history')
-def history():
-    """Displays the chat history sidebar for the logged-in user."""
+@app.route('/get_history')
+def get_history():
+    """Returns the chat history for the logged-in user as JSON."""
     user_id = session.get('user_id')
     if not user_id:
-        return redirect(url_for('index'))
+        return jsonify([])
 
     history_data = load_history()
     user_info = history_data.get(user_id)
     if not user_info or 'chats' not in user_info:
-        return render_template('history.html', chat_sessions=[])
+        return jsonify([])
 
     chat_sessions = []
     for chat_id in user_info['chats']:
-        # You might want to load some metadata about each chat session here
-        # For now, we'll just show the chat ID.
         chat_sessions.append({'id': chat_id})
 
-    return render_template('history.html', chat_sessions=chat_sessions)
+    return jsonify(chat_sessions)
 
 @app.route('/logout')
 def logout():
@@ -152,4 +150,3 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
