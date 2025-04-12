@@ -8,99 +8,103 @@
         body {
             font-family: 'Helvetica Neue', sans-serif;
             background-color: #000;
-            color: #E1E8ED;
+            color: #fff;
             padding: 20px;
             max-width: 600px;
             margin: 0 auto;
         }
-        
+
         h1 {
-            color: #1DA1F2;
-            margin-bottom: 25px;
+            color: #fff;
+            margin-bottom: 30px;
             text-align: center;
+            font-size: 24px;
+            font-weight: bold;
         }
-        
+
         .account-info {
-            background-color: #2F3336;
-            border-radius: 10px;
             padding: 20px;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
         }
-        
+
         .info-item {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
-        
+
         .info-label {
-            color: #8899A6;
-            font-weight: 500;
+            color: #8899A6; /* Light grey for labels, similar to Twitter */
+            font-weight: normal;
             display: block;
             margin-bottom: 5px;
+            font-size: 14px;
         }
-        
+
         .info-value {
             font-size: 16px;
         }
-        
+
         .button-container {
             display: flex;
             gap: 15px;
             justify-content: center;
         }
-        
+
         .btn {
-            padding: 10px 20px;
-            border-radius: 20px;
+            padding: 12px 25px;
+            border-radius: 25px;
             border: none;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: 0.2s;
+            transition: background-color 0.2s;
+            font-size: 16px;
         }
-        
+
         .logout-btn {
-            background-color: #1DA1F2;
+            background-color: #1DA1F2; /* Twitter's primary blue color */
             color: white;
         }
-        
+
         .logout-btn:hover {
             background-color: #1991DB;
         }
-        
+
         .chat-btn {
-            background-color: #2F3336;
-            color: #E1E8ED;
+            background-color: transparent; /* Transparent background for the secondary button */
+            color: #fff;
+            border: 1px solid #fff; /* Add a white border */
         }
-        
+
         .chat-btn:hover {
-            background-color: #3D4247;
+            background-color: rgba(255, 255, 255, 0.1); /* Slightly lighter black on hover */
         }
     </style>
+    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
 </head>
 <body>
     <h1>Account Details</h1>
-    
+
     <div class="account-info">
         <div class="info-item">
             <span class="info-label">User ID</span>
             <div class="info-value">{{ user_id }}</div>
         </div>
-        
+
         <div class="info-item">
             <span class="info-label">Email</span>
             <div class="info-value">{{ email }}</div>
         </div>
-        
+
         <div class="info-item">
             <span class="info-label">First Name</span>
             <div class="info-value">{{ first_name }}</div>
         </div>
-        
+
         <div class="info-item">
             <span class="info-label">Last Name</span>
             <div class="info-value">{{ last_name }}</div>
         </div>
     </div>
-    
+
     <div class="button-container">
         <button class="btn logout-btn" onclick="window.location.href='/logout'">Logout</button>
         <button class="btn chat-btn" onclick="window.location.href='/chat'">Back to Chat</button>
