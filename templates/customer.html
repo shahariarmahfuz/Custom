@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Chat Interface</title>
-    <link rel="icon" type="image/x-icon" href="[https://i.postimg.cc/NGpYP3SF/20250408-093122-2.jpg](https://i.postimg.cc/NGpYP3SF/20250408-093122-2.jpg)">
-    <link href="[https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982](https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982)" rel="stylesheet">
-    <link href="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css)" rel="stylesheet">
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
     <style>
         :root {
             --font-size: 15px;
@@ -19,7 +17,7 @@
             --input-bg-color: #2F3336;
             --main-font: 'Helvetica Neue', sans-serif;
             --user-message-bg: #333;
-            --history-sidebar-width: 300px;
+            --sidebar-width: 280px;
         }
 
         * {
@@ -50,30 +48,16 @@
             padding: 0 16px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
             z-index: 10;
             background-color: #000;
-            justify-content: space-between;
         }
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-        .header-left h3 {
+        .header h3 {
             font-size: var(--font-size);
             font-weight: 700;
-            margin-left: 8px;
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .header-right i {
-            font-size: 20px;
-            cursor: pointer;
         }
         .messages {
             flex: 1;
@@ -227,79 +211,106 @@
         li {
             margin-bottom: 5px;
         }
-
-        /* History Sidebar Styles */
-        .history-sidebar {
-            position: fixed;
-            top: 0;
-            right: -var(--history-sidebar-width);
-            width: var(--history-sidebar-width);
-            height: 100%;
-            background-color: #192734;
-            border-left: 1px solid var(--border-color);
-            z-index: 11;
-            transition: right 0.3s ease-in-out;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        .history-sidebar.open {
-            right: 0;
-        }
-        .history-sidebar h4 {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
+        .icon-button {
+            background: none;
+            border: none;
             color: var(--text-color);
+            font-size: 24px;
+            padding: 8px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
-        .history-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        .icon-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 0;
+            width: var(--sidebar-width);
+            height: 100%;
+            background: #000;
+            border-right: 1px solid var(--border-color);
+            transition: 0.3s;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.active {
+            left: 0;
+        }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            height: var(--header-height);
+        }
+        .sidebar-header h4 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .history-items {
+            padding: 8px;
+            overflow-y: auto;
+            flex: 1;
         }
         .history-item {
-            padding: 10px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 12px;
+            margin: 8px 0;
+            background: var(--input-bg-color);
+            border-radius: 8px;
             cursor: pointer;
-            color: var(--text-color);
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-        }
-        .history-item:last-child {
-            border-bottom: none;
+            transition: 0.2s;
         }
         .history-item:hover {
-            background-color: #2f3336;
+            background: #333;
+        }
+        .history-item-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-item-meta {
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
         }
         .overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 10;
-            display: none;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
         }
-        .overlay.open {
-            display: block;
+        .overlay.active {
+            opacity: 1;
+            pointer-events: all;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="header-left">
-            <i class="fa-solid fa-plus" id="newChatButton" style="cursor: pointer;"></i>
-            <h3 style="margin-left: 8px;">AI Assistant</h3>
-        </div>
-        <div class="header-right">
-            <i class="fa-solid fa-clock-rotate-left" id="historyButton" style="cursor: pointer;"></i>
-        </div>
+        <button id="historyButton" class="icon-button">≡</button>
+        <h3>AI Assistant</h3>
+        <button id="newChatButton" class="icon-button">+</button>
     </div>
 
-    <div class="messages" id="messageArea">
-        </div>
+    <div class="messages" id="messageArea"></div>
 
     <div class="input-area">
         <div class="input-container">
@@ -308,50 +319,43 @@
         <button id="sendButton">➜</button>
     </div>
 
-    <div class="history-sidebar" id="historySidebar">
-        <h4>Chat History</h4>
-        <ul class="history-list" id="historyList">
-            </ul>
-    </div>
-
     <div class="overlay" id="overlay"></div>
 
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js)"></script>
+    <div class="sidebar" id="historySidebar">
+        <div class="sidebar-header">
+            <h4>Chat History</h4>
+            <button id="closeSidebar" class="icon-button">×</button>
+        </div>
+        <div id="historyList" class="history-items"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const textarea = document.getElementById('messageInput');
             const messageArea = document.getElementById('messageArea');
             const sendButton = document.getElementById('sendButton');
-            const newChatButton = document.getElementById('newChatButton');
             const historyButton = document.getElementById('historyButton');
+            const newChatButton = document.getElementById('newChatButton');
             const historySidebar = document.getElementById('historySidebar');
-            const historyList = document.getElementById('historyList');
+            const closeSidebar = document.getElementById('closeSidebar');
             const overlay = document.getElementById('overlay');
-            let currentChatId = "{{ chat_id }}";
+            const historyList = document.getElementById('historyList');
 
-            function loadExistingHistory() {
-                const historyData = JSON.parse('{{ history|tojson|safe }}');
-                messageArea.innerHTML = '';
-                historyData.forEach(item => {
-                    if (item.sender === 'user') {
-                        addMessage(item.text, 'user');
-                    } else if (item.sender === 'bot') {
-                        addMessage(item.html, 'bot');
-                    }
-                });
-                Prism.highlightAll();
-            }
+            let currentChatId = null;
 
-            loadExistingHistory();
-            loadHistoryList();
+            // Initialize chat
+            initChat();
 
+            // Textarea auto-resize
             textarea.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
+            // Send message on Enter (without Shift)
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -359,69 +363,36 @@
                 }
             });
 
+            // Button event listeners
             sendButton.addEventListener('click', sendMessage);
+            historyButton.addEventListener('click', toggleSidebar);
+            newChatButton.addEventListener('click', createNewChat);
+            closeSidebar.addEventListener('click', toggleSidebar);
+            overlay.addEventListener('click', toggleSidebar);
 
-            newChatButton.addEventListener('click', function() {
-                fetch('/new_chat')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.redirect) {
-                            window.location.href = data.redirect;
-                        }
-                    });
-            });
-
-            historyButton.addEventListener('click', function() {
-                historySidebar.classList.add('open');
-                overlay.classList.add('open');
-            });
-
-            overlay.addEventListener('click', function() {
-                historySidebar.classList.remove('open');
-                overlay.classList.remove('open');
-            });
-
-            function loadHistoryList() {
-                fetch('/get_history_list')
-                    .then(response => response.json())
-                    .then(data => {
-                        historyList.innerHTML = '';
-                        data.forEach(historyItem => {
-                            const listItem = document.createElement('li');
-                            listItem.className = 'history-item';
-                            listItem.textContent = historyItem.last_message || `Chat ID: ${historyItem.chat_id}`;
-                            listItem.addEventListener('click', function() {
-                                loadChatHistory(historyItem.chat_id);
-                                historySidebar.classList.remove('open');
-                                overlay.classList.remove('open');
-                            });
-                            historyList.appendChild(listItem);
-                        });
-                    })
-                    .catch(error => console.error('Error loading history list:', error));
+            async function initChat() {
+                // Load initial messages for current chat
+                await loadCurrentChat();
             }
 
-            function loadChatHistory(chatId) {
-                fetch(`/load_history/${chatId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.history) {
-                            messageArea.innerHTML = '';
-                            currentChatId = chatId;
-                            data.history.forEach(item => {
-                                if (item.sender === 'user') {
-                                    addMessage(item.text, 'user');
-                                } else if (item.sender === 'bot') {
-                                    addMessage(item.html, 'bot');
-                                }
+            async function loadCurrentChat() {
+                try {
+                    const response = await fetch('/get_current_chat');
+                    const data = await response.json();
+                    
+                    if (data.chat_id) {
+                        currentChatId = data.chat_id;
+                        messageArea.innerHTML = '';
+                        
+                        if (data.messages && data.messages.length > 0) {
+                            data.messages.forEach(msg => {
+                                addMessage(msg.content, msg.sender);
                             });
-                            Prism.highlightAll();
-                        } else if (data.error) {
-                            console.error('Error loading chat history:', data.error);
-                            messageArea.innerHTML = `<div class="reply-message">Error loading chat history: ${data.error}</div>`;
                         }
-                    })
-                    .catch(error => console.error('Error loading chat history:', error));
+                    }
+                } catch (error) {
+                    console.error('Error loading current chat:', error);
+                }
             }
 
             async function sendMessage() {
@@ -435,12 +406,16 @@
                 const loadingId = showLoading();
 
                 try {
+                    const formData = new URLSearchParams();
+                    formData.append('message', message);
+                    formData.append('chat_id', currentChatId);
+
                     const response = await fetch('/send_message', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        body: `message=${encodeURIComponent(message)}`
+                        body: formData
                     });
 
                     if (!response.ok) {
@@ -452,7 +427,6 @@
                     hideLoading(loadingId);
                     addMessage(data.html, 'bot');
                     Prism.highlightAll();
-                    loadHistoryList(); // Update history list after sending a message
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -493,6 +467,114 @@
                     loadingElement.remove();
                 }
             }
+
+            function toggleSidebar() {
+                historySidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+
+            async function createNewChat() {
+                try {
+                    const response = await fetch('/new_chat', { 
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        currentChatId = data.chat_id;
+                        messageArea.innerHTML = '';
+                        await loadHistoryList();
+                    }
+                } catch (error) {
+                    console.error('Error creating new chat:', error);
+                }
+            }
+
+            async function loadHistoryList() {
+                try {
+                    const response = await fetch('/get_history');
+                    const history = await response.json();
+                    historyList.innerHTML = '';
+                    
+                    if (!history || Object.keys(history).length === 0) {
+                        historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: #888;">No chat history</div>';
+                        return;
+                    }
+                    
+                    // Sort chats by creation date (newest first)
+                    const sortedChats = Object.entries(history).sort((a, b) => {
+                        return new Date(b[1].created_at) - new Date(a[1].created_at);
+                    });
+
+                    for (const [chatId, chatData] of sortedChats) {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'history-item';
+                        
+                        // Get first message content or default title
+                        let title = 'New Chat';
+                        if (chatData.messages && chatData.messages.length > 0) {
+                            const firstUserMessage = chatData.messages.find(msg => msg.sender === 'user');
+                            if (firstUserMessage) {
+                                title = firstUserMessage.content.length > 30 
+                                    ? firstUserMessage.content.substring(0, 30) + '...' 
+                                    : firstUserMessage.content;
+                            }
+                        }
+                        
+                        const messageCount = chatData.messages ? chatData.messages.length : 0;
+                        const date = new Date(chatData.created_at);
+                        
+                        itemDiv.innerHTML = `
+                            <div class="history-item-title">${title}</div>
+                            <div class="history-item-meta">
+                                <span>${messageCount} ${messageCount === 1 ? 'message' : 'messages'}</span>
+                                <span>${date.toLocaleDateString()}</span>
+                            </div>
+                        `;
+                        
+                        itemDiv.addEventListener('click', async () => {
+                            await loadChat(chatId);
+                            toggleSidebar();
+                        });
+                        
+                        historyList.appendChild(itemDiv);
+                    }
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                    historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: #ff4444;">Error loading history</div>';
+                }
+            }
+
+            async function loadChat(chatId) {
+                try {
+                    const response = await fetch(`/load_chat/${chatId}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        currentChatId = chatId;
+                        messageArea.innerHTML = '';
+                        
+                        if (data.messages && data.messages.length > 0) {
+                            data.messages.forEach(msg => {
+                                addMessage(msg.content, msg.sender);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading chat:', error);
+                    addMessage('Error loading chat history', 'bot');
+                }
+            }
+
+            // Load history list when sidebar is opened
+            historySidebar.addEventListener('transitionstart', function(e) {
+                if (e.propertyName === 'left' && this.classList.contains('active')) {
+                    loadHistoryList();
+                }
+            });
         });
     </script>
 </body>
