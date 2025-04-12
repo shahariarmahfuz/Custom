@@ -137,9 +137,9 @@
             outline: none;
         }
 
-        .input-area button {
+        .send-icon-button {
             background-color: var(--primary-color);
-            color: white;
+            color: var(--text-color);
             border: none;
             border-radius: 50%;
             width: 44px;
@@ -155,11 +155,11 @@
             transition: background-color 0.2s ease-in-out;
         }
 
-        .input-area button:hover {
+        .send-icon-button:hover {
             background-color: #1989da;
         }
 
-        .input-area button:active {
+        .send-icon-button:active {
             background-color: #1570ad;
         }
 
@@ -397,22 +397,24 @@
             background-color: #333;
         }
 
-        #accountButtonSidebar {
+        .sidebar-button {
             display: block;
-            width: 100%;
-            padding: 10px;
+            width: calc(100% - 16px); /* Adjust width for padding */
+            padding: 10px 16px;
+            margin: 8px;
             border: none;
-            background-color: #eee;
-            color: #000;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
             text-align: left;
             cursor: pointer;
             font-size: 16px;
             font-weight: 500;
-            border-top: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: background-color 0.2s;
         }
 
-        #accountButtonSidebar:hover {
-            background-color: #ddd;
+        .sidebar-button:hover {
+            background-color: #333;
         }
     </style>
 </head>
@@ -423,7 +425,6 @@
         <button id="newChatButton" class="icon-button" onclick="window.location.href='/new_chat'">+</button>
     </div>
 
-<!-- পূর্বের কোড একই আছে -->
 <div class="messages" id="chat_area">
     {% for message in chat_history %}
         {% if message.sender == 'user' %}
@@ -435,13 +436,12 @@
         {% endif %}
     {% endfor %}
 </div>
-<!-- বাকি কোড একই আছে -->
-    <div class="input-area">
+<div class="input-area">
         <div class="input-container">
             <input type="hidden" id="chat_id" value="{{ chat_id }}">
             <textarea id="user_input" placeholder="Type your message..." rows="1"></textarea>
         </div>
-        <button id="sendButton" onclick="sendMessage()">➜</button>
+        <button id="sendButton" class="send-icon-button" onclick="sendMessage()">➜</button>
     </div>
 
     <div class="overlay" id="overlay"></div>
@@ -452,7 +452,7 @@
             <button id="closeSidebar" class="icon-button" onclick="closeHistory()">×</button>
         </div>
         <div id="history_list" class="history-items"></div>
-        <button id="accountButtonSidebar" onclick="window.location.href='/account'">Account</button>
+        <button id="accountButtonSidebar" class="sidebar-button" onclick="window.location.href='/account'">Account</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
@@ -476,8 +476,15 @@
             // Send message on Enter (without Shift)
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
+                    // Prevent default newline behavior, but don't send
                     e.preventDefault();
-                    sendMessage();
+                    // Instead, insert a newline character manually
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + "\n" + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 1;
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
                 }
             });
         });
