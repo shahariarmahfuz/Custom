@@ -1,3 +1,4 @@
+# App.py
 from flask import Flask, render_template, request, jsonify, session
 import requests
 import uuid
@@ -64,15 +65,18 @@ def format_code_block(code, language=''):
     '''
 
 def format_text(text):
+    # Process bullet points with bold text
+    text = re.sub(r'\*\s+\*\*(.*?)\*\*', r'<li><b>\1</b></li>', text)
     # Process bold text
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
     # Process italic text
-    text = re.sub(r'\*(?!\s)(.*?)(?<!\s)\*', r'<i>\1</i>', text)
-    # Process single asterisk for bullet points
-    text = re.sub(r'^\*\s+(.*)$', r'<li>• \1</li>', text, flags=re.MULTILINE)
+    text = re.sub(r'\*(?!\s)(.*?)\*', r'<i>\1</i>', text)
     # Convert line breaks to <br>
     text = text.replace('\n', '<br>')
+    # Replace remaining single asterisks with bullet points
+    text = re.sub(r'\*(?!\*)', '•', text)
     return text
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+    
