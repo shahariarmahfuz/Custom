@@ -1,29 +1,33 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import requests
 import uuid
 import re
 import html
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # Change this to a real secret key
 
 @app.route('/customer')
 def customer():
+    # Generate a persistent UUID for the session if not exists
+    if 'user_id' not in session:
+        session['user_id'] = str(uuid.uuid4())
     return render_template('customer.html')
 
 @app.route('/send_message', methods=['POST'])
 def handle_message():
     user_msg = request.form.get('message', '')
-    unique_id = str(uuid.uuid4())
     
-    # নেকো সাইটে রিকোয়েস্ট পাঠানো
-    api_url = f"https://nekosite.ddns.net/ai?q={user_msg}&id={unique_id}"
+    # Use the persistent session ID
+    user_id = session.get('user_id', str(uuid.uuid4()))
+    
+    api_url = f"https://nekosite.ddns.net/ai?q={user_msg}&id={user_id}"
     try:
         response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         data = response.json()
         ai_response = data.get('response', '')
         
-        # রেসপন্স প্রসেসিং
         processed_html = process_ai_response(ai_response)
         return jsonify({'html': processed_html})
         
@@ -31,55 +35,50 @@ def handle_message():
         return jsonify({'html': f'Error: {str(e)}'})
 
 def process_ai_response(text):
-    # Process code blocks first
-    processed_text = process_code_blocks(text)
+    # Split text into parts while preserving code blocks
+    parts = re.split(r'(```[\s\S]*?```)', text)
+    processed_parts = []
     
+    for part in parts:
+        if part.startswith('```') and part.endswith('```'):
+            # Process code blocks
+            lang_match = re.match(r'```(\w+)?', part)
+            language = lang_match.group(1) if lang_match else ''
+            code_content = part[len(language)+3:-3].strip()
+            
+            processed_parts.append(format_code_block(code_content, language))
+        else:
+            # Process normal text
+            processed_parts.append(format_text(part))
+    
+    return ''.join(processed_parts)
+
+def format_code_block(code, language=''):
+    escaped_code = html.escape(code)
+    language_class = f'language-{language}' if language else ''
+    
+    return f'''
+    <div class="code-container">
+        <button class="copy-icon" onclick="copyCode(this)">
+            <svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 24 24">
+                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 
+                1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
+            </svg>
+        </button>
+        <pre class="{language_class}"><code>{escaped_code}</code></pre>
+    </div>
+    '''
+
+def format_text(text):
     # Process bullet points with bold text
-    processed_text = process_bullet_bold(processed_text)
-    
+    text = re.sub(r'\*\s+\*\*(.*?)\*\*', r'<li><b>\1</b></li>', text)
     # Process bold text
-    processed_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', processed_text)
-    
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
     # Process italic text
-    processed_text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', processed_text)
-    
-    return processed_text
-
-def process_code_blocks(text):
-    # Process all code blocks (```html and ```)
-    def replace_code_block(match):
-        code_type = match.group(1) or ''
-        code_content = match.group(2).strip()
-        
-        # Escape HTML entities
-        escaped_content = html.escape(code_content)
-        
-        # Generate unique IDs for the copy functionality
-        tooltip_id = f"tooltip-{uuid.uuid4()}"
-        
-        return f'''
-        <div class="code-container">
-            <div class="tooltip" id="{tooltip_id}">Copied!</div>
-            <button class="copy-icon" onclick="copyCode('{tooltip_id}', this)" aria-label="Copy Code">
-                <svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 24 24">
-                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 
-                    1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
-                </svg>
-            </button>
-            <pre>{escaped_content}</pre>
-        </div>
-        '''
-    
-    # Handle both ```html and regular ``` code blocks
-    text = re.sub(r'```(html)?(.*?)```', replace_code_block, text, flags=re.DOTALL)
+    text = re.sub(r'\*(?!\s)(.*?)\*', r'<i>\1</i>', text)
+    # Convert line breaks to <br>
+    text = text.replace('\n', '<br>')
     return text
-
-def process_bullet_bold(text):
-    # Process bullet points with bold text (* **text**)
-    def replace_bullet_bold(match):
-        return f'<li><b>{match.group(1)}</b></li>'
-    
-    return re.sub(r'\*\s+\*\*(.*?)\*\*', replace_bullet_bold, text)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
