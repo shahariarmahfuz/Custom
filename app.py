@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import json
 import os
 import datetime
@@ -6,6 +6,7 @@ import uuid
 import requests
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Important for session management
 
 HISTORY_FILE = 'history.json'
 CHAT_HISTORY_DIR = 'chat_history'
@@ -53,20 +54,28 @@ def index():
         name = request.form['name']
         user_id = request.form['user_id']
         history_data = load_history()
-        history_data[user_id] = {'name': name, 'last_login': datetime.datetime.now().isoformat()}
+        if user_id not in history_data:
+            history_data[user_id] = {'name': name, 'last_login': datetime.datetime.now().isoformat(), 'chats': []}
+        else:
+            history_data[user_id]['last_login'] = datetime.datetime.now().isoformat()
         save_history(history_data)
+        session['user_id'] = user_id
         return redirect(url_for('chat'))
     return render_template('index.html')
 
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     """Handles the main chat page."""
-    history_data = load_history()
-    if not history_data:
-        return redirect(url_for('index'))  # Redirect if no user is logged in
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('index'))
 
-    user_id = list(history_data.keys())[0] # Assuming only one user for simplicity in this example
-    user_name = history_data[user_id]['name']
+    history_data = load_history()
+    user_info = history_data.get(user_id)
+    if not user_info:
+        return redirect(url_for('index'))
+
+    user_name = user_info['name']
 
     if request.method == 'POST':
         user_text = request.form['user_input']
@@ -94,7 +103,18 @@ def chat():
     chat_history = []
     if not chat_id:
         chat_id = str(uuid.uuid4()) # Generate a new chat ID
+        # Associate this new chat ID with the user
+        if user_id not in history_data:
+            history_data[user_id] = {'name': user_name, 'last_login': datetime.datetime.now().isoformat(), 'chats': [chat_id]}
+        else:
+            if 'chats' not in history_data[user_id]:
+                history_data[user_id]['chats'] = [chat_id]
+            else:
+                history_data[user_id]['chats'].append(chat_id)
+        save_history(history_data)
     else:
+        if user_id not in history_data or 'chats' not in history_data[user_id] or chat_id not in history_data[user_id]['chats']:
+            return "Unauthorized access to this chat." # Prevent accessing others' chats
         chat_history = load_chat_history(chat_id)
 
     return render_template('chat.html', user_name=user_name, chat_id=chat_id, chat_history=chat_history)
@@ -106,22 +126,29 @@ def new_chat():
 
 @app.route('/history')
 def history():
-    """Displays the chat history sidebar."""
-    history_data = load_history()
-    if not history_data:
-        return "No user logged in." # Handle this better in a real app
+    """Displays the chat history sidebar for the logged-in user."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('index'))
 
-    user_id = list(history_data.keys())[0]
-    chat_files = [f for f in os.listdir(CHAT_HISTORY_DIR) if f.endswith('.json')]
+    history_data = load_history()
+    user_info = history_data.get(user_id)
+    if not user_info or 'chats' not in user_info:
+        return render_template('history.html', chat_sessions=[])
+
     chat_sessions = []
-    for filename in chat_files:
-        chat_id = filename[:-5]
-        # You might want to store some metadata about each chat session
-        # (e.g., timestamp of first message) to display in the sidebar.
+    for chat_id in user_info['chats']:
+        # You might want to load some metadata about each chat session here
         # For now, we'll just show the chat ID.
         chat_sessions.append({'id': chat_id})
 
     return render_template('history.html', chat_sessions=chat_sessions)
+
+@app.route('/logout')
+def logout():
+    """Logs the user out by clearing the session."""
+    session.pop('user_id', None)
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
