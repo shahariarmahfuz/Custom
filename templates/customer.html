@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Chat Interface</title>
-    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
-    <!-- Prism.js CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet">
+    <link href="[https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982](https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982)" rel="stylesheet">
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css)" rel="stylesheet">
     <style>
         :root {
             --font-size: 15px;
@@ -199,65 +197,15 @@
             position: relative;
             background: #1e1e1e;
             border-radius: 12px;
-            margin: 12px 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-            overflow: hidden;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.4);
+            margin: 10px 0;
+            overflow-x: auto;
         }
-        .copy-wrapper {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            z-index: 2;
-        }
-        .copy-btn {
-            background: #333;
-            border: none;
-            padding: 6px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        .copy-btn:hover {
-            background: #444;
-        }
-        .copy-btn:hover .tooltip {
-            opacity: 1;
-            visibility: visible;
-        }
-        .copy-icon {
-            width: 20px;
-            height: 20px;
-            fill: #fff;
-            display: block;
-        }
-        .tooltip {
-            position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #444;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-        pre[class*="language-"] {
-            margin: 0 !important;
-            padding: 1.5em !important;
-            background: #1e1e1e !important;
-        }
-        .code-container pre code {
-            font-family: 'Fira Code', monospace !important;
-            font-size: 14px;
-        }
-        .line-numbers .line-numbers-rows {
-            border-right: 1px solid #333;
-            padding-right: 1em;
+        .code-container pre {
+            margin: 0;
+            background: transparent !important;
+            padding: 0 !important;
         }
         b, strong {
             font-weight: bold;
@@ -275,7 +223,7 @@
 </head>
 <body>
     <div class="header">
-        <img src="https://via.placeholder.com/36" alt="Profile">
+        <img src="[https://via.placeholder.com/36](https://via.placeholder.com/36)" alt="Profile">
         <h3>AI Assistant</h3>
     </div>
 
@@ -288,10 +236,8 @@
         <button id="sendButton">➜</button>
     </div>
 
-    <!-- Prism.js Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js](https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js)"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -305,7 +251,7 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // Handle Enter key
+            // Handle Enter key (send on Enter, newline on Shift+Enter)
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -337,17 +283,16 @@
                         },
                         body: `message=${encodeURIComponent(message)}`
                     });
-                    
+
                     const data = await response.json();
-                    
+
                     // Remove loading and show response
                     hideLoading(loadingId);
                     addMessage(data.html, 'bot');
-                    
-                    // Highlight code blocks and apply line numbers
+
+                    // Highlight any code blocks
                     Prism.highlightAll();
-                    Prism.plugins.lineNumbers.resize();
-                    
+
                 } catch (error) {
                     console.error('Error:', error);
                     hideLoading(loadingId);
@@ -357,7 +302,7 @@
 
             function addMessage(content, sender) {
                 const messageDiv = document.createElement('div');
-                
+
                 if (sender === 'user') {
                     messageDiv.className = 'user-message-container';
                     messageDiv.innerHTML = `<div class="user-message">${content}</div>`;
@@ -365,7 +310,7 @@
                     messageDiv.className = 'reply-message';
                     messageDiv.innerHTML = content;
                 }
-                
+
                 messageArea.appendChild(messageDiv);
                 messageArea.scrollTop = messageArea.scrollHeight;
             }
@@ -386,22 +331,6 @@
                 if (loadingElement) {
                     loadingElement.remove();
                 }
-            }
-
-            function copyCode(button) {
-                const codeBlock = button.closest('.code-container').querySelector('code');
-                const textToCopy = codeBlock ? codeBlock.textContent : '';
-                
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'tooltip show';
-                    tooltip.textContent = 'Copied!';
-                    button.appendChild(tooltip);
-                    
-                    setTimeout(() => {
-                        tooltip.remove();
-                    }, 1500);
-                });
             }
         });
     </script>
