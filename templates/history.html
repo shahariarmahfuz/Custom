@@ -5,27 +5,65 @@
     <style>
         body {
             font-family: sans-serif;
-        }
-        ul {
-            list-style-type: none;
+            margin: 0;
             padding: 0;
         }
-        li {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
         }
-        li:hover {
-            background-color: #f9f9f9;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .chat-list {
+            list-style: none;
+            padding: 0;
+        }
+        .chat-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .chat-item:hover {
+            background-color: #f5f5f5;
+        }
+        .chat-date {
+            font-size: 12px;
+            color: #666;
+        }
+        .navigation {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h2>Chat History</h2>
-    <ul>
-        {% for session in chat_sessions %}
-            <li><a href="/chat?chat_id={{ session.id }}" target="_parent">{{ session.id }}</a></li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <div class="header">
+            <h1>Your Chat History</h1>
+            <div>
+                <a href="{{ url_for('chat') }}">New Chat</a> | 
+                <a href="{{ url_for('logout') }}">Logout</a>
+            </div>
+        </div>
+
+        <ul class="chat-list">
+            {% for chat_id, chat_data in history.items() %}
+            <li class="chat-item">
+                <a href="{{ url_for('view_chat', chat_id=chat_id) }}">
+                    <h3>Chat: {{ chat_id[:8] }}...</h3>
+                    <p class="chat-date">Started: {{ chat_data.created_at }}</p>
+                    <p>Messages: {{ chat_data.messages|length }}</p>
+                </a>
+            </li>
+            {% else %}
+            <li>No chat history found.</li>
+            {% endfor %}
+        </ul>
+    </div>
 </body>
 </html>
