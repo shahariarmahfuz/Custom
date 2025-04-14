@@ -7,151 +7,224 @@
             font-family: sans-serif;
             margin: 0;
             padding: 0;
-        }
-        .container {
-            width: 80%;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            height: 100vh;
+            background-color: #f5f5f5;
         }
-        .chat-id {
-            font-size: 14px;
-            color: #666;
-        }
-        .message-container {
-            max-height: 500px;
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #ddd;
+            padding: 20px;
             overflow-y: auto;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
         }
-        .message-list {
-            list-style: none;
-            padding: 0;
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            background: #f9f9f9;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
         }
         .message {
             margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 5px;
+            max-width: 70%;
         }
         .user-message {
-            background-color: #e6f7ff;
-            margin-left: 20%;
+            margin-left: auto;
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 18px 18px 0 18px;
         }
         .ai-message {
-            background-color: #f9f9f9;
-            margin-right: 20%;
-        }
-        .message-time {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        .message-content {
-            margin: 0;
-        }
-        .chat-form {
-            margin-top: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        input[type="text"], input[type="file"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-        button {
+            margin-right: auto;
+            background: #f1f1f1;
             padding: 10px 15px;
-            background-color: #007bff;
+            border-radius: 18px 18px 18px 0;
+        }
+        .input-area {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            background: #f9f9f9;
+            display: flex;
+        }
+        #message-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+        #send-button {
+            padding: 10px 20px;
+            background: #4CAF50;
             color: white;
             border: none;
+            border-radius: 20px;
             cursor: pointer;
         }
-        .error-message {
-            color: red;
-            margin-top: 10px;
+        .chat-item {
+            padding: 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 5px;
         }
-        .navigation {
-            margin-bottom: 20px;
+        .chat-item:hover {
+            background: #f0f0f0;
+        }
+        .active-chat {
+            background: #e3f2fd;
+        }
+        .new-chat-btn {
+            margin-top: 10px;
+            padding: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .logout-btn {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Chat with AI</h1>
-            <div class="chat-id">Chat ID: {{ chat_id }}</div>
+    <div class="sidebar">
+        <h3>Chat History</h3>
+        <div id="chat-history"></div>
+        <button class="new-chat-btn" onclick="newChat()">New Chat</button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+    
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Chat ID: {{ chat_id }}</h2>
         </div>
         
-        <div class="navigation">
-            <a href="{{ url_for('history') }}">View All Chats</a> | 
-            <a href="{{ url_for('chat') }}">New Chat</a> | 
-            <a href="{{ url_for('logout') }}">Logout</a>
+        <div class="chat-messages" id="messages-container">
+            {% for message in messages %}
+                <div class="message {% if message.sender == 'user' %}user-message{% else %}ai-message{% endif %}">
+                    {{ message.content }}
+                </div>
+            {% endfor %}
         </div>
-
-        <div class="message-container">
-            <ul class="message-list">
-                {% if chat_history %}
-                    {% for message in chat_history.messages %}
-                        <li class="message user-message">
-                            <div class="message-time">{{ message.timestamp }}</div>
-                            <p class="message-content"><strong>You:</strong> {{ message.prompt }}</p>
-                            {% if message.image %}
-                            <p><em>Image attached</em></p>
-                            {% endif %}
-                        </li>
-                        {% if message.response %}
-                        <li class="message ai-message">
-                            <div class="message-time">{{ message.timestamp }}</div>
-                            <p class="message-content"><strong>AI:</strong> {{ message.response }}</p>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-                
-                {% if response %}
-                    <li class="message user-message">
-                        <div class="message-time">Just now</div>
-                        <p class="message-content"><strong>You:</strong> {{ request.form.prompt }}</p>
-                        {% if request.files.image %}
-                        <p><em>Image attached</em></p>
-                        {% endif %}
-                    </li>
-                    <li class="message ai-message">
-                        <div class="message-time">Just now</div>
-                        <p class="message-content"><strong>AI:</strong> {{ response.response }}</p>
-                    </li>
-                {% endif %}
-            </ul>
+        
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            <button id="send-button" onclick="sendMessage()">Send</button>
         </div>
-
-        <form class="chat-form" method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="prompt">Your Message:</label>
-                <input type="text" id="prompt" name="prompt" required>
-            </div>
-            <div class="form-group">
-                <label for="image">Upload Image (Optional):</label>
-                <input type="file" id="image" name="image">
-            </div>
-            <button type="submit">Send</button>
-        </form>
-
-        {% if error %}
-        <p class="error-message">{{ error }}</p>
-        {% endif %}
     </div>
+
+    <script>
+        // Load chat history
+        function loadChatHistory() {
+            fetch('/history')
+                .then(response => response.json())
+                .then(data => {
+                    const historyContainer = document.getElementById('chat-history');
+                    historyContainer.innerHTML = '';
+                    
+                    data.forEach(chat => {
+                        const chatItem = document.createElement('div');
+                        chatItem.className = 'chat-item';
+                        if (chat.chat_id === '{{ chat_id }}') {
+                            chatItem.classList.add('active-chat');
+                        }
+                        
+                        chatItem.innerHTML = `
+                            <strong>${chat.title}</strong><br>
+                            <small>${new Date(chat.last_activity).toLocaleString()}</small>
+                        `;
+                        
+                        chatItem.onclick = () => {
+                            window.location.href = `/chat?chat_id=${chat.chat_id}`;
+                        };
+                        
+                        historyContainer.appendChild(chatItem);
+                    });
+                });
+        }
+        
+        // Send message
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const formData = new FormData();
+            formData.append('prompt', message);
+            
+            fetch('/chat?chat_id={{ chat_id }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Add messages to UI
+                    addMessage('user', message);
+                    addMessage('ai', data.response);
+                    input.value = '';
+                    
+                    // Reload history to update last activity
+                    loadChatHistory();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending message');
+            });
+        }
+        
+        // Add message to UI
+        function addMessage(sender, content) {
+            const container = document.getElementById('messages-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = content;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // New chat
+        function newChat() {
+            window.location.href = '/chat';
+        }
+        
+        // Logout
+        function logout() {
+            window.location.href = '/logout';
+        }
+        
+        // Handle Enter key
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Initial load
+        loadChatHistory();
+    </script>
 </body>
 </html>
