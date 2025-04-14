@@ -6,6 +6,7 @@ import uuid
 import requests
 import hashlib
 import re
+import base64
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
@@ -206,13 +207,28 @@ def chat():
             processed_messages.append(msg)
 
     if request.method == 'POST':
-        user_text = request.form['user_input']
-        current_chat_id = request.form['chat_id']
+        user_text = request.form.get('user_input', '')
+        current_chat_id = request.form.get('chat_id')
+        image_file = request.files.get('image')
+        image_data_base64 = None
 
-        # Send message to AI API
-        api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={current_chat_id}"
+        if image_file:
+            try:
+                image_bytes = image_file.read()
+                image_data_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            except Exception as e:
+                error_message = f"Error encoding image: {e}"
+                return jsonify({'error': error_message})
+
+        payload = {
+            'user_id': session['user_id'],
+            'prompt': user_text,
+            'image_data': image_data_base64
+        }
+
+        api_url = "https://worker-production-54e5.up.railway.app/ai"
         try:
-            response = requests.get(api_url)
+            response = requests.post(api_url, json=payload)
             response.raise_for_status()
             ai_response_data = response.json()
             raw_response = ai_response_data.get('response', 'No response from AI.')
@@ -220,12 +236,14 @@ def chat():
         except requests.exceptions.RequestException as e:
             raw_error = f"Error communicating with AI: {e}"
             ai_response = format_response(raw_error)
+        except ValueError:
+            ai_response = format_response("Error decoding API response.")
 
         # Save chat history
         updated_chat_history_data = load_chat_history(current_chat_id)
         if not updated_chat_history_data.get('messages'):
             updated_chat_history_data['messages'] = []
-        
+
         updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
@@ -243,10 +261,10 @@ def chat():
 
         return jsonify({'response': ai_response})
 
-    return render_template('chat_combined.html', 
-                         user_name=user_name, 
-                         chat_id=chat_id, 
-                         chat_history=processed_messages, 
+    return render_template('chat_combined.html',
+                         user_name=user_name,
+                         chat_id=chat_id,
+                         chat_history=processed_messages,
                          created_at=chat_history_data.get('created_at'))
 
 @app.route('/new_chat')
@@ -298,7 +316,7 @@ def account():
         session.clear()
         return redirect(url_for('login'))
 
-    return render_template('account.html', 
+    return render_template('account.html',
                          first_name=user['first_name'],
                          last_name=user['last_name'],
                          full_name=user['full_name'],
@@ -314,3 +332,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+            
