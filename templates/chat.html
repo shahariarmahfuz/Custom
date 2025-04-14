@@ -1,3 +1,4 @@
+<!-- chat.html (updated) -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -55,10 +56,14 @@
             border-top: 1px solid #ddd;
             background: #f9f9f9;
             display: flex;
-            align-items: center; /* Align items vertically in the input area */
+            flex-direction: column;
+        }
+        .input-row {
+            display: flex;
+            margin-bottom: 10px;
         }
         #message-input {
-            flex-grow: 1; /* Allow input to take up available space */
+            flex: 1;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 20px;
@@ -71,10 +76,6 @@
             border: none;
             border-radius: 20px;
             cursor: pointer;
-            margin-left: 10px; /* Add some space between input and button */
-        }
-        #image-upload {
-            margin-left: 10px; /* Add some space for the image upload button */
         }
         .chat-item {
             padding: 10px;
@@ -108,6 +109,18 @@
             cursor: pointer;
             width: 100%;
         }
+        #image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+            display: none;
+        }
+        .message-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 5px;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -117,28 +130,32 @@
         <button class="new-chat-btn" onclick="newChat()">New Chat</button>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
-
+    
     <div class="chat-container">
         <div class="chat-header">
             <h2>Chat ID: {{ chat_id }}</h2>
         </div>
-
+        
         <div class="chat-messages" id="messages-container">
             {% for message in messages %}
                 <div class="message {% if message.sender == 'user' %}user-message{% else %}ai-message{% endif %}">
                     {{ message.content }}
                     {% if message.image %}
-                    <br>
-                    <img src="data:image/png;base64,{{ message.image }}" alt="User Image" style="max-width: 200px; height: auto;">
+                        <img src="data:image/jpeg;base64,{{ message.image }}" class="message-image">
                     {% endif %}
                 </div>
             {% endfor %}
         </div>
-
+        
         <div class="input-area">
-            <input type="text" id="message-input" placeholder="Type your message...">
-            <input type="file" id="image-upload" name="image" accept="image/*">
-            <button id="send-button" onclick="sendMessage()">Send</button>
+            <div class="input-row">
+                <input type="text" id="message-input" placeholder="Type your message...">
+                <button id="send-button" onclick="sendMessage()">Send</button>
+            </div>
+            <div>
+                <input type="file" id="image-input" accept="image/*">
+                <img id="image-preview" src="#" alt="Preview">
+            </div>
         </div>
     </div>
 
@@ -150,45 +167,40 @@
                 .then(data => {
                     const historyContainer = document.getElementById('chat-history');
                     historyContainer.innerHTML = '';
-
+                    
                     data.forEach(chat => {
                         const chatItem = document.createElement('div');
                         chatItem.className = 'chat-item';
                         if (chat.chat_id === '{{ chat_id }}') {
                             chatItem.classList.add('active-chat');
                         }
-
+                        
                         chatItem.innerHTML = `
                             <strong>${chat.title}</strong><br>
                             <small>${new Date(chat.last_activity).toLocaleString()}</small>
                         `;
-
+                        
                         chatItem.onclick = () => {
                             window.location.href = `/chat?chat_id=${chat.chat_id}`;
                         };
-
+                        
                         historyContainer.appendChild(chatItem);
                     });
                 });
         }
-
+        
         // Send message
         function sendMessage() {
             const input = document.getElementById('message-input');
             const message = input.value.trim();
-            const imageInput = document.getElementById('image-upload');
-            const imageFile = imageInput.files[0];
-
-            if (!message && !imageFile) return;
-
+            const imageInput = document.getElementById('image-input');
+            
+            if (!message && !imageInput.files[0]) return;
+            
             const formData = new FormData();
-            if (message) {
-                formData.append('prompt', message);
-            }
-            if (imageFile) {
-                formData.append('image', imageFile);
-            }
-
+            if (message) formData.append('prompt', message);
+            if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
+            
             fetch('/chat?chat_id={{ chat_id }}', {
                 method: 'POST',
                 body: formData
@@ -198,21 +210,17 @@
                 if (data.error) {
                     alert(data.error);
                 } else {
-                    // Add messages to UI
-                    if (message) {
-                        addMessage('user', message);
-                    }
-                    if (imageFile) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            addImageMessage('user', reader.result.split(',')[1]); // Send base64 data
-                        }
-                        reader.readAsDataURL(imageFile);
-                    }
+                    // Add user message to UI
+                    addMessage('user', message, imageInput.files[0]);
+                    
+                    // Add AI response to UI
                     addMessage('ai', data.response);
+                    
+                    // Reset input
                     input.value = '';
-                    imageInput.value = ''; // Clear the image input
-
+                    imageInput.value = '';
+                    document.getElementById('image-preview').style.display = 'none';
+                    
                     // Reload history to update last activity
                     loadChatHistory();
                 }
@@ -222,44 +230,62 @@
                 alert('Error sending message');
             });
         }
-
-        // Add text message to UI
-        function addMessage(sender, content) {
+        
+        // Add message to UI
+        function addMessage(sender, content, imageFile = null) {
             const container = document.getElementById('messages-container');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}-message`;
-            messageDiv.textContent = content;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+            messageDiv.textContent = content || '';
+            
+            if (imageFile && sender === 'user') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'message-image';
+                    messageDiv.appendChild(img);
+                    container.appendChild(messageDiv);
+                    container.scrollTop = container.scrollHeight;
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                container.appendChild(messageDiv);
+                container.scrollTop = container.scrollHeight;
+            }
         }
-
-        // Add image message to UI
-        function addImageMessage(sender, base64Image) {
-            const container = document.getElementById('messages-container');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
-            messageDiv.innerHTML = `<img src="data:image/png;base64,${base64Image}" alt="User Image" style="max-width: 200px; height: auto;">`;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
+        
         // New chat
         function newChat() {
             window.location.href = '/chat';
         }
-
+        
         // Logout
         function logout() {
             window.location.href = '/logout';
         }
-
-        // Handle Enter key for text input
+        
+        // Handle Enter key
         document.getElementById('message-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
-
+        
+        // Image preview
+        document.getElementById('image-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const preview = document.getElementById('image-preview');
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
         // Initial load
         loadChatHistory();
     </script>
