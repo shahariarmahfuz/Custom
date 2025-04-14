@@ -417,24 +417,47 @@
             background-color: #333;
         }
 
-        .input-with-image {
+        .input-area-extended {
+            padding: 8px 16px;
+            border-top: 1px solid var(--border-color);
+            background-color: #000;
+            position: sticky;
+            bottom: 0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .input-container-extended {
+            flex: 1;
+            border-radius: 24px;
+            background-color: var(--input-bg-color);
             display: flex;
             align-items: center;
-            gap: 8px;
+            padding: 2px 8px; /* Added padding for image input */
         }
 
-        .input-with-image .input-container {
-            flex-grow: 1;
-        }
-
-        .input-with-image input[type="file"] {
-            background-color: var(--input-bg-color);
+        .input-container-extended textarea {
+            flex: 1;
+            border: none;
+            border-radius: 24px;
+            background-color: transparent;
             color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 8px;
-            font-size: 14px;
-            cursor: pointer;
+            padding: 12px 16px;
+            font-size: var(--font-size);
+            resize: none;
+            max-height: 120px;
+            line-height: 1.4;
+        }
+
+        .input-container-extended textarea:focus {
+            outline: none;
+        }
+
+        .input-container-extended input[type="file"] {
+            color: var(--text-color);
+            font-size: var(--font-size);
+            padding: 10px 0 10px 10px;
         }
     </style>
 </head>
@@ -449,23 +472,25 @@
     {% for message in chat_history %}
         {% if message.sender == 'user' %}
             <div class="user-message-container">
-                <div class="user-message">{{ message.content }}</div>
+                <div class="user-message">{{ message.content }}
+                {% if message.get('image') %}
+                    <br><small>Image Uploaded</small>
+                {% endif %}
+                </div>
             </div>
         {% elif message.sender == 'ai' %}
             <div class="reply-message">{{ message.content|safe }}</div>
         {% endif %}
     {% endfor %}
 </div>
-<div class="input-area">
-    <div class="input-with-image">
-        <div class="input-container">
+<div class="input-area-extended">
+        <div class="input-container-extended">
             <input type="hidden" id="chat_id" value="{{ chat_id }}">
             <textarea id="user_input" placeholder="Type your message..." rows="1"></textarea>
+            <input type="file" id="image_upload" name="image" accept="image/*">
         </div>
-        <input type="file" id="image" name="image" accept="image/*">
+        <button id="sendButton" class="send-icon-button" onclick="sendMessage()">➜</button>
     </div>
-    <button id="sendButton" class="send-icon-button" onclick="sendMessage()">➜</button>
-</div>
 
     <div class="overlay" id="overlay"></div>
 
@@ -500,7 +525,12 @@
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    sendMessage();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + "\n" + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 1;
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
                 }
             });
         });
@@ -528,7 +558,6 @@
                         return;
                     }
 
-                    // Sort chats by creation date (newest first)
                     const sortedChats = Object.entries(data).sort(([, a], [, b]) => {
                         return new Date(b.created_at) - new Date(a.created_at);
                     });
@@ -562,14 +591,36 @@
                 });
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const userInput = document.getElementById('user_input');
             const chatArea = document.getElementById('chat_area');
             const chatId = document.getElementById('chat_id').value;
             const message = userInput.value.trim();
-            const imageFile = document.getElementById('image').files[0];
+            const imageInput = document.getElementById('image_upload');
+            const imageFile = imageInput.files[0];
 
-            let base64Image = null;
+            if (!message && !imageFile) return;
+
+            const formData = new FormData();
+            formData.append('user_input', message);
+            formData.append('chat_id', chatId);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            // Display user message immediately
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'user-message-container';
+            let userContent = message;
+            if (imageFile) {
+                userContent += '<br><small>Image Uploading...</small>';
+            }
+            userMessageDiv.innerHTML = `<div class="user-message">${userContent}</div>`;
+            chatArea.appendChild(userMessageDiv);
+
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            imageInput.value = ''; // Clear the image input after sending
 
             const loadingId = 'loading-' + Date.now();
             const loadingDiv = document.createElement('div');
@@ -579,72 +630,35 @@
             chatArea.appendChild(loadingDiv);
             chatArea.scrollTop = chatArea.scrollHeight;
 
-            const processAndSend = (base64Image) => {
-                const payload = {
-                    'user_id': '{{ session.user_id }}',
-                    'prompt': message,
-                    'image_data': base64Image
-                };
-
-                fetch('/chat', {
+            try {
+                const response = await fetch('/chat', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById(loadingId).remove();
-
-                    // Display user message
-                    if (message || base64Image) {
-                        const userMessageDiv = document.createElement('div');
-                        userMessageDiv.className = 'user-message-container';
-                        let content = message;
-                        if (base64Image) {
-                            content += '<br><img src="' + base64Image + '" style="max-width: 200px; height: auto;">';
-                        }
-                        userMessageDiv.innerHTML = `<div class="user-message">${content}</div>`;
-                        chatArea.appendChild(userMessageDiv);
-                    }
-
-                    const aiMessageDiv = document.createElement('div');
-                    aiMessageDiv.className = 'reply-message';
-                    aiMessageDiv.innerHTML = data.response;
-                    chatArea.appendChild(aiMessageDiv);
-
-                    chatArea.scrollTop = chatArea.scrollHeight;
-                    Prism.highlightAll();
-                })
-                .catch(error => {
-                    console.error('Error sending message:', error);
-                    document.getElementById(loadingId).remove();
-
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'reply-message';
-                    errorDiv.style.color = '#ff4444';
-                    errorDiv.textContent = 'Error sending message';
-                    chatArea.appendChild(errorDiv);
-                    chatArea.scrollTop = chatArea.scrollHeight;
+                    body: formData,
                 });
-            };
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
 
-            if (imageFile) {
-                const reader = new FileReader();
-                reader.onloadend = function() {
-                    base64Image = reader.result;
-                    processAndSend(base64Image);
-                }
-                reader.readAsDataURL(imageFile);
-            } else {
-                processAndSend(null);
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.className = 'reply-message';
+                aiMessageDiv.innerHTML = data.response;
+                chatArea.appendChild(aiMessageDiv);
+
+                chatArea.scrollTop = chatArea.scrollHeight;
+                Prism.highlightAll();
+            } catch (error) {
+                console.error('Error sending message:', error);
+                document.getElementById(loadingId).remove();
+
+                const errorDiv = document.createElement('div');
+                                const errorDiv = document.createElement('div');
+                errorDiv.className = 'reply-message';
+                errorDiv.style.color = '#ff4444';
+                errorDiv.textContent = 'Error sending message';
+                chatArea.appendChild(errorDiv);
+                chatArea.scrollTop = chatArea.scrollHeight;
             }
-
-            userInput.value = '';
-            userInput.style.height = 'auto';
-            document.getElementById('image').value = ''; // Clear the file input
         }
     </script>
 </body>
 </html>
+        
