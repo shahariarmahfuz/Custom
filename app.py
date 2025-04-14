@@ -1,179 +1,185 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import base64
 import requests
-import json
 import uuid
+import os
+import json
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Important for session management
+app.secret_key = 'your-secret-key-here'  # Change this in production
 
+# Configuration
 API_URL = "https://worker-production-54e5.up.railway.app/ai"
-HISTORY_FILE = "history.json"
+USERS_FILE = 'users.json'
+CHATS_DIR = 'chat_history'
 
-def load_history():
-    try:
-        with open(HISTORY_FILE, 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        return {}
+# Ensure directories exist
+os.makedirs(CHATS_DIR, exist_ok=True)
 
-def save_history(history_data):
-    with open(HISTORY_FILE, 'w') as f:
-        json.dump(history_data, f, indent=4)
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'r') as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+    return {}
 
-def generate_chat_id():
-    return str(uuid.uuid4())
+def save_users(users):
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users, f, indent=4)
 
-@app.route("/", methods=["GET"])
-def login_page():
-    return render_template("login.html")
+def load_chat(chat_id):
+    file_path = os.path.join(CHATS_DIR, f'{chat_id}.json')
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {'messages': [], 'created_at': datetime.now().isoformat()}
+    return {'messages': [], 'created_at': datetime.now().isoformat()}
 
-@app.route("/login", methods=["POST"])
+def save_chat(chat_id, chat_data):
+    file_path = os.path.join(CHATS_DIR, f'{chat_id}.json')
+    with open(file_path, 'w') as f:
+        json.dump(chat_data, f, indent=4)
+
+@app.route('/')
+def home():
+    if 'user_id' in session:
+        return redirect(url_for('chat'))
+    return render_template('login.html')
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    user_id = request.form.get("user_id")
-    user_name = request.form.get("user_name")
-    if user_id and user_name:
-        session['user_id'] = user_id
-        session['user_name'] = user_name
-        chat_id = generate_chat_id()
-        return redirect(url_for('chat', chat_id=chat_id))
-    else:
-        return render_template("login.html", error="Please enter both User ID and Name.")
-
-@app.route("/chat/<chat_id>", methods=["GET", "POST"])
-def chat(chat_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login_page'))
-
-    user_id = session['user_id']
-    response_data = None
-    error_message = None
-    history_data = load_history()
-    chat_history = history_data.get(user_id, {}).get(chat_id, [])
-
-    if request.method == "POST":
-        prompt = request.form.get("prompt")
-        image_file = request.files.get("image")
-        image_data_base64 = None
-
-        if image_file:
-            try:
-                image_bytes = image_file.read()
-                image_data_base64 = base64.b64encode(image_bytes).decode("utf-8")
-            except Exception as e:
-                error_message = f"Error encoding image: {e}"
-                return render_template("chat.html", chat_id=chat_id, history=chat_history, error=error_message)
-
-        payload = {
-            "user_id": user_id,
-            "prompt": prompt,
-            "image_data": image_data_base64,
-            "chat_id": chat_id
-        }
-
-        try:
-            api_response = requests.post(API_URL, json=payload)
-            api_response.raise_for_status()
-            response_data = api_response.json()
-
-            # Save the interaction to history
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            user_message = {"type": "user", "text": prompt, "image": image_data_base64, "timestamp": timestamp}
-            ai_response = {"type": "ai", "response": response_data.get("response"), "timestamp": timestamp}
-
-            if user_id not in history_data:
-                history_data[user_id] = {}
-            if chat_id not in history_data[user_id]:
-                history_data[user_id][chat_id] = []
-
-            history_data[user_id][chat_id].append(user_message)
-            history_data[user_id][chat_id].append(ai_response)
-            save_history(history_data)
-
-            # Reload chat history to display the new message
-            chat_history = history_data.get(user_id, {}).get(chat_id, [])
-
-        except requests.exceptions.RequestException as e:
-            error_message = f"Error sending request to API: {e}"
-        except ValueError:
-            error_message = "Error decoding API response."
-
-    return render_template("chat.html", chat_id=chat_id, history=chat_history, response=response_data, error=error_message)
-
-@app.route("/history")
-def history():
-    if 'user_id' not in session:
-        return redirect(url_for('login_page'))
-
-    user_id = session['user_id']
-    history_data = load_history()
-    user_chats = history_data.get(user_id, {})
-    return render_template("history.html", chats=user_chats)
-
-@app.route("/history/<chat_id>", methods=["GET", "POST"])
-def view_history(chat_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login_page'))
-
-    user_id = session['user_id']
-    history_data = load_history()
-    chat_history = history_data.get(user_id, {}).get(chat_id, [])
-    response_data = None
-    error_message = None
-
-    if request.method == "POST":
-        prompt = request.form.get("prompt")
-        image_file = request.files.get("image")
-        image_data_base64 = None
-
-        if image_file:
-            try:
-                image_bytes = image_file.read()
-                image_data_base64 = base64.b64encode(image_bytes).decode("utf-8")
-            except Exception as e:
-                error_message = f"Error encoding image: {e}"
-                return render_template("view_history.html", chat_id=chat_id, history=chat_history, error=error_message)
-
-        payload = {
-            "user_id": user_id,
-            "prompt": prompt,
-            "image_data": image_data_base64,
-            "chat_id": chat_id
-        }
-
-        try:
-            api_response = requests.post(API_URL, json=payload)
-            api_response.raise_for_status()
-            response_data = api_response.json()
-
-            # Save the new interaction to history
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            user_message = {"type": "user", "text": prompt, "image": image_data_base64, "timestamp": timestamp}
-            ai_response = {"type": "ai", "response": response_data.get("response"), "timestamp": timestamp}
-
-            history_data[user_id][chat_id].append(user_message)
-            history_data[user_id][chat_id].append(ai_response)
-            save_history(history_data)
-
-            # Reload chat history to display the new message
-            chat_history = history_data.get(user_id, {}).get(chat_id, [])
-
-        except requests.exceptions.RequestException as e:
-            error_message = f"Error sending request to API: {e}"
-        except ValueError:
-            error_message = "Error decoding API response."
-
-    return render_template("view_history.html", chat_id=chat_id, history=chat_history, response=response_data, error=error_message)
-
-@app.route("/logout")
-def logout():
-    session.pop('user_id', None)
-    session.pop('user_name', None)
-    return redirect(url_for('login_page'))
-
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    if request.method == 'POST':
+        username = request.form.get('username').strip()
+        
+        users = load_users()
+        
+        # Create new user if doesn't exist
+        if username not in users:
+            user_id = str(uuid.uuid4())
+            users[username] = {
+                'user_id': user_id,
+                'chats': [],
+                'created_at': datetime.now().isoformat()
+            }
+            save_users(users)
+        
+        # Set session
+        session['user_id'] = users[username]['user_id']
+        session['username'] = username
+        return redirect(url_for('chat'))
     
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+@app.route('/chat', methods=['GET', 'POST'])
+def chat():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    users = load_users()
+    username = session['username']
+    user_data = users[username]
+    
+    # Get or create chat_id
+    chat_id = request.args.get('chat_id')
+    if not chat_id:
+        chat_id = str(uuid.uuid4())
+        return redirect(url_for('chat', chat_id=chat_id))
+    
+    # Load chat history
+    chat_history = load_chat(chat_id)
+    
+    # Add to user's chats if new
+    if chat_id not in user_data['chats']:
+        user_data['chats'].append(chat_id)
+        save_users(users)
+    
+    if request.method == 'POST':
+        # Handle AJAX request for chat
+        prompt = request.form.get('prompt')
+        image_file = request.files.get('image')
+        image_data_base64 = None
+        
+        if image_file:
+            try:
+                image_bytes = image_file.read()
+                image_data_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            except Exception as e:
+                return jsonify({'error': f'Image processing error: {str(e)}'}), 400
+        
+        # Add user message to history
+        chat_history['messages'].append({
+            'sender': 'user',
+            'content': prompt,
+            'image': image_data_base64,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        # Call API
+        payload = {
+            "user_id": session['user_id'],
+            "prompt": prompt,
+            "image_data": image_data_base64
+        }
+        
+        try:
+            api_response = requests.post(API_URL, json=payload)
+            api_response.raise_for_status()
+            response_data = api_response.json()
+            
+            # Add AI response to history
+            chat_history['messages'].append({
+                'sender': 'ai',
+                'content': response_data.get('response', ''),
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            save_chat(chat_id, chat_history)
+            return jsonify(response_data)
+        
+        except requests.exceptions.RequestException as e:
+            return jsonify({'error': str(e)}), 500
+    
+    return render_template('chat.html', 
+                         username=username,
+                         chat_id=chat_id,
+                         messages=chat_history['messages'])
+
+@app.route('/history')
+def get_history():
+    if 'user_id' not in session:
+        return jsonify([])
+    
+    users = load_users()
+    username = session['username']
+    user_data = users[username]
+    
+    history = []
+    for chat_id in user_data['chats']:
+        chat_data = load_chat(chat_id)
+        if chat_data['messages']:
+            first_message = chat_data['messages'][0]['content']
+            title = first_message[:30] + '...' if len(first_message) > 30 else first_message
+        else:
+            title = 'New Chat'
+        
+        history.append({
+            'chat_id': chat_id,
+            'title': title,
+            'created_at': chat_data['created_at'],
+            'last_activity': chat_data['messages'][-1]['timestamp'] if chat_data['messages'] else chat_data['created_at']
+        })
+    
+    return jsonify(history)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
