@@ -416,6 +416,26 @@
         .sidebar-button:hover {
             background-color: #333;
         }
+
+        .input-with-image {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-with-image .input-container {
+            flex-grow: 1;
+        }
+
+        .input-with-image input[type="file"] {
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -437,12 +457,17 @@
     {% endfor %}
 </div>
 <div class="input-area">
-        <div class="input-container">
-            <input type="hidden" id="chat_id" value="{{ chat_id }}">
-            <textarea id="user_input" placeholder="Type your message..." rows="1"></textarea>
+    <form id="chat-form" enctype="multipart/form-data">
+        <div class="input-with-image">
+            <div class="input-container">
+                <input type="hidden" name="chat_id" value="{{ chat_id }}">
+                <textarea id="user_input" name="user_input" placeholder="Type your message..." rows="1"></textarea>
+            </div>
+            <input type="file" id="image" name="image" accept="image/*">
         </div>
-        <button id="sendButton" class="send-icon-button" onclick="sendMessage()">➜</button>
-    </div>
+        <button id="sendButton" class="send-icon-button" type="button" onclick="sendMessage()">➜</button>
+    </form>
+</div>
 
     <div class="overlay" id="overlay"></div>
 
@@ -476,15 +501,8 @@
             // Send message on Enter (without Shift)
             textarea.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    // Prevent default newline behavior, but don't send
                     e.preventDefault();
-                    // Instead, insert a newline character manually
-                    const start = this.selectionStart;
-                    const end = this.selectionEnd;
-                    this.value = this.value.substring(0, start) + "\n" + this.value.substring(end);
-                    this.selectionStart = this.selectionEnd = start + 1;
-                    this.style.height = 'auto';
-                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                    sendMessage();
                 }
             });
         });
@@ -547,21 +565,25 @@
         }
 
         function sendMessage() {
-            const userInput = document.getElementById('user_input');
+            const chatForm = document.getElementById('chat-form');
             const chatArea = document.getElementById('chat_area');
-            const chatId = document.getElementById('chat_id').value;
-            const message = userInput.value.trim();
+            const message = document.getElementById('user_input').value.trim();
+            const chatId = document.querySelector('input[name="chat_id"]').value;
+            const imageFile = document.getElementById('image').files[0];
 
-            if (!message) return;
+            if (!message && !imageFile) return;
 
-            // Display user message immediately
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'user-message-container';
-            userMessageDiv.innerHTML = `<div class="user-message">${message}</div>`;
-            chatArea.appendChild(userMessageDiv);
+            // Display user message immediately (if text is present)
+            if (message) {
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.className = 'user-message-container';
+                userMessageDiv.innerHTML = `<div class="user-message">${message}</div>`;
+                chatArea.appendChild(userMessageDiv);
+            }
 
-            userInput.value = '';
-            userInput.style.height = 'auto';
+            document.getElementById('user_input').value = '';
+            document.getElementById('user_input').style.height = 'auto';
+            document.getElementById('image').value = ''; // Clear the file input
 
             const loadingId = 'loading-' + Date.now();
             const loadingDiv = document.createElement('div');
@@ -571,24 +593,34 @@
             chatArea.appendChild(loadingDiv);
             chatArea.scrollTop = chatArea.scrollHeight;
 
+            const formData = new FormData(chatForm);
+            // Append text message if present, as FormData might not pick up empty textarea reliably
+            if (message) {
+                formData.set('user_input', message); // Use set to ensure only one value for user_input
+            }
+
             fetch('/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `user_input=${encodeURIComponent(message)}&chat_id=${encodeURIComponent(chatId)}`,
+                body: formData,
             })
             .then(response => response.json())
             .then(data => {
                 document.getElementById(loadingId).remove();
 
-                const aiMessageDiv = document.createElement('div');
-                aiMessageDiv.className = 'reply-message';
-                aiMessageDiv.innerHTML = data.response;
-                chatArea.appendChild(aiMessageDiv);
-
+                if (data.error) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'reply-message';
+                    errorDiv.style.color = '#ff4444';
+                    errorDiv.textContent = data.error;
+                    chatArea.appendChild(errorDiv);
+                } else {
+                    const aiMessageDiv = document.createElement('div');
+                    aiMessageDiv.className = 'reply-message';
+                    aiMessageDiv.innerHTML = data.response;
+                    chatArea.appendChild(aiMessageDiv);
+                    Prism.highlightAll();
+                }
                 chatArea.scrollTop = chatArea.scrollHeight;
-                Prism.highlightAll();
             })
             .catch(error => {
                 console.error('Error sending message:', error);
