@@ -1,123 +1,314 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-import base64
-import requests
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
 import json
 import os
+import datetime
 import uuid
-from datetime import datetime
+import requests
+import hashlib
+import re
 
-app = Flask(__name__)
-app.secret_key = "your_secret_key"  # For session management, replace with a strong secret key
+app.secret_key = 'my-super-secret-key-817363'
+HISTORY_FILE = 'users.json'
+CHAT_HISTORY_DIR = 'chat_history'
 
-API_URL = "https://worker-production-54e5.up.railway.app/ai"
-HISTORY_FILE = "history.json"
+# Ensure directories exist
+if not os.path.exists(CHAT_HISTORY_DIR):
+    os.makedirs(CHAT_HISTORY_DIR)
 
-def load_history():
+def format_response(text):
+    """Formats text with markdown-like syntax to HTML"""
+    # Process list items with bold text
+    text = re.sub(r'\*\s+\*\*(.*?)\*\*', r'<li><b>\1</b></li>', text)
+    # Process bold text
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    # Process italic text (non-space after *)
+    text = re.sub(r'\*(?!\s)(.*?)\*', r'<i>\1</i>', text)
+    # Replace remaining asterisks with bullets
+    text = re.sub(r'\*', '•', text)
+    # Replace newlines with <br>
+    text = text.replace('\n', '<br>')
+    return text
+
+def load_users():
+    """Loads users data from JSON file."""
     if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
+        with open(HISTORY_FILE, 'r') as f:
             try:
                 return json.load(f)
             except json.JSONDecodeError:
                 return {}
     return {}
 
-def save_history(history_data):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history_data, f, indent=4)
+def save_users(users_data):
+    """Saves users data to JSON file."""
+    with open(HISTORY_FILE, 'w') as f:
+        json.dump(users_data, f, indent=4)
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        if username:
-            session["username"] = username
-            return redirect(url_for("index"))
-        return render_template("login.html", error="Please enter a username.")
-    return render_template("login.html")
-
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if "username" not in session:
-        return redirect(url_for("login"))
-
-    username = session["username"]
-    history_data = load_history()
-    user_history = history_data.get(username, [])
-
-    if request.method == "POST":
-        user_id = username  # Use username as user ID for simplicity
-        prompt = request.form.get("prompt")
-        image_file = request.files.get("image")
-        chat_id = request.form.get("chat_id")  # Get chat_id if it exists
-        image_data_base64 = None
-
-        if image_file:
+def load_chat_history(chat_id):
+    """Loads chat history for a specific chat ID."""
+    filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
             try:
-                image_bytes = image_file.read()
-                image_data_base64 = base64.b64encode(image_bytes).decode("utf-8")
-            except Exception as e:
-                return jsonify({"error": f"Error encoding image: {e}"}), 400
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
+    return {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
 
-        payload = {
-            "user_id": user_id,
-            "prompt": prompt,
-            "image_data": image_data_base64,
-            "chat_id": chat_id  # Send chat_id to the AI API
+def save_chat_history(chat_id, chat_history_data):
+    """Saves chat history for a specific chat ID."""
+    filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
+    with open(filepath, 'w') as f:
+        json.dump(chat_history_data, f, indent=4)
+
+def hash_password(password):
+    """Hashes password using SHA-256."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def is_valid_email(email):
+    """Basic email validation."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+@app.route('/')
+def home():
+    """Home page with login/signup options."""
+    return render_template('home.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    """Handles user signup."""
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        # Validate inputs
+        if not all([first_name, last_name, email, password, confirm_password]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('signup'))
+
+        if not is_valid_email(email):
+            flash('Please enter a valid email address', 'error')
+            return redirect(url_for('signup'))
+
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return redirect(url_for('signup'))
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters', 'error')
+            return redirect(url_for('signup'))
+
+        users = load_users()
+
+        # Check if email already exists
+        if email in users:
+            flash('Email already registered. Please login instead.', 'error')
+            return redirect(url_for('login'))
+
+        # Generate unique user ID
+        user_id = str(uuid.uuid4())
+
+        # Create user account
+        users[email] = {
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'full_name': f"{first_name} {last_name}",
+            'password_hash': hash_password(password),
+            'created_at': datetime.datetime.now().isoformat(),
+            'last_login': None,
+            'chats': []
         }
 
+        save_users(users)
+        flash('Account created successfully! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Handles user login."""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+
+        if not email or not password:
+            flash('Email and password are required', 'error')
+            return redirect(url_for('login'))
+
+        users = load_users()
+        user = users.get(email)
+
+        if not user:
+            flash('Invalid email or password', 'error')
+            return redirect(url_for('login'))
+
+        if user['password_hash'] != hash_password(password):
+            flash('Invalid email or password', 'error')
+            return redirect(url_for('login'))
+
+        # Update last login time
+        user['last_login'] = datetime.datetime.now().isoformat()
+        save_users(users)
+
+        # Set session
+        session.clear()
+        session['user_id'] = user['user_id']
+        session['email'] = email
+        session['user_name'] = user['first_name']
+
+        return redirect(url_for('chat'))
+
+    return render_template('login.html')
+
+@app.route('/chat', methods=['GET', 'POST'])
+def chat():
+    """Main chat page."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    user_name = user['first_name']
+    chat_id = request.args.get('chat_id')
+    chat_history_data = {'messages': [], 'created_at': datetime.datetime.now().isoformat()}
+    is_existing_chat = False
+
+    if chat_id:
+        if chat_id in user['chats']:
+            chat_history_data = load_chat_history(chat_id)
+            is_existing_chat = True
+        else:
+            return "Unauthorized access to this chat.", 403
+
+    if not chat_id:
+        chat_id = str(uuid.uuid4())
+        chat_history_data['created_at'] = datetime.datetime.now().isoformat()
+
+    # Process existing messages for formatting
+    processed_messages = []
+    for msg in chat_history_data.get('messages', []):
+        if msg['sender'] == 'ai':
+            formatted_content = format_response(msg['content'])
+            processed_messages.append({'sender': 'ai', 'content': formatted_content})
+        else:
+            processed_messages.append(msg)
+
+    if request.method == 'POST':
+        user_text = request.form['user_input']
+        current_chat_id = request.form['chat_id']
+
+        # Send message to AI API
+        api_url = f"https://nekosite.ddns.net/ai?q={user_text}&id={current_chat_id}"
         try:
-            api_response = requests.post(API_URL, json=payload)
-            api_response.raise_for_status()
-            response_data = api_response.json()
-            ai_response = response_data.get("response")
-
-            if ai_response:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                if not chat_id:
-                    chat_id = str(uuid.uuid4())
-                    user_history.append({"chat_id": chat_id, "history": [{"role": "user", "content": prompt, "has_image": bool(image_file)}, {"role": "ai", "content": ai_response, "timestamp": timestamp}]})
-                else:
-                    for chat in user_history:
-                        if chat["chat_id"] == chat_id:
-                            chat["history"].append({"role": "user", "content": prompt, "has_image": bool(image_file)})
-                            chat["history"].append({"role": "ai", "content": ai_response, "timestamp": timestamp})
-                            break
-
-                history_data[username] = user_history
-                save_history(history_data)
-                return jsonify({"response": ai_response, "chat_id": chat_id})
-            else:
-                return jsonify({"error": "No 'response' found in API response."}), 500
-
+            response = requests.get(api_url)
+            response.raise_for_status()
+            ai_response_data = response.json()
+            raw_response = ai_response_data.get('response', 'No response from AI.')
+            ai_response = format_response(raw_response)
         except requests.exceptions.RequestException as e:
-            return jsonify({"error": f"Error sending request to API: {e}"}), 500
-        except ValueError:
-            return jsonify({"error": "Error decoding API response."}), 500
+            raw_error = f"Error communicating with AI: {e}"
+            ai_response = format_response(raw_error)
 
-    return render_template("index.html", history=user_history)
+        # Save chat history
+        updated_chat_history_data = load_chat_history(current_chat_id)
+        if not updated_chat_history_data.get('messages'):
+            updated_chat_history_data['messages'] = []
+        
+        updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
+        updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
+        save_chat_history(current_chat_id, updated_chat_history_data)
 
-@app.route("/history/<chat_id>")
-def load_chat_history(chat_id):
-    if "username" not in session:
-        return redirect(url_for("login"))
+        # If this is the first message in a new chat, save the chat ID to user's history
+        if not is_existing_chat and updated_chat_history_data['messages']:
+            users = load_users()
+            if session['email'] in users:
+                if 'chats' not in users[session['email']]:
+                    users[session['email']]['chats'] = [current_chat_id]
+                else:
+                    if current_chat_id not in users[session['email']]['chats']:
+                        users[session['email']]['chats'].append(current_chat_id)
+                save_users(users)
 
-    username = session["username"]
-    history_data = load_history()
-    user_history = history_data.get(username, [])
+        return jsonify({'response': ai_response})
 
-    selected_history = None
-    for chat in user_history:
-        if chat["chat_id"] == chat_id:
-            selected_history = chat["history"]
-            break
+    return render_template('chat_combined.html', 
+                         user_name=user_name, 
+                         chat_id=chat_id, 
+                         chat_history=processed_messages, 
+                         created_at=chat_history_data.get('created_at'))
 
-    return jsonify({"history": selected_history, "chat_id": chat_id})
+@app.route('/new_chat')
+def new_chat():
+    """Redirects to a new chat session."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return redirect(url_for('chat'))
 
-@app.route("/logout")
+@app.route('/get_history')
+def get_history():
+    """Returns the chat history for the logged-in user as JSON."""
+    if 'user_id' not in session:
+        return jsonify([])
+
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user or 'chats' not in user:
+        return jsonify([])
+
+    chat_sessions = {}
+    for chat_id in user['chats']:
+        filepath = os.path.join(CHAT_HISTORY_DIR, f'{chat_id}.json')
+        if os.path.exists(filepath):
+            chat_data = load_chat_history(chat_id)
+            if chat_data and chat_data.get('messages'):
+                first_user_message = next((msg['content'] for msg in chat_data.get('messages', []) if msg['sender'] == 'user'), None)
+                title = "New Chat"
+                if first_user_message:
+                    title_words = first_user_message.split()[:4]
+                    title = " ".join(title_words)
+                chat_sessions[chat_id] = {
+                    'title': title,
+                    'message_count': len(chat_data.get('messages', [])),
+                    'created_at': chat_data.get('created_at', datetime.datetime.now().isoformat())
+                }
+
+    return jsonify(chat_sessions)
+
+@app.route('/account')
+def account():
+    """Displays the user's account information."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    users = load_users()
+    user = users.get(session.get('email'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    return render_template('account.html', 
+                         first_name=user['first_name'],
+                         last_name=user['last_name'],
+                         full_name=user['full_name'],
+                         email=session['email'],
+                         user_id=user['user_id'],
+                         created_at=user['created_at'])
+
+@app.route('/logout')
 def logout():
-    session.pop("username", None)
-    return redirect(url_for("login"))
+    """Logs the user out."""
+    session.clear()
+    return redirect(url_for('home'))
 
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
-    
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
