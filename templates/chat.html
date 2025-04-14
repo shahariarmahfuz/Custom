@@ -1,4 +1,4 @@
-<!-- chat.html (updated) -->
+<!-- chat.html (simplified) -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,32 +7,25 @@
         body {
             font-family: sans-serif;
             margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
+            padding: 20px;
             background-color: #f5f5f5;
         }
-        .sidebar {
-            width: 250px;
-            background: white;
-            border-right: 1px solid #ddd;
-            padding: 20px;
-            overflow-y: auto;
-        }
         .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
             background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         .chat-header {
             padding: 15px;
-            border-bottom: 1px solid #ddd;
-            background: #f9f9f9;
+            background: #4CAF50;
+            color: white;
         }
         .chat-messages {
-            flex: 1;
             padding: 20px;
+            height: 500px;
             overflow-y: auto;
         }
         .message {
@@ -55,8 +48,6 @@
             padding: 15px;
             border-top: 1px solid #ddd;
             background: #f9f9f9;
-            display: flex;
-            flex-direction: column;
         }
         .input-row {
             display: flex;
@@ -77,38 +68,6 @@
             border-radius: 20px;
             cursor: pointer;
         }
-        .chat-item {
-            padding: 10px;
-            margin: 5px 0;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .chat-item:hover {
-            background: #f0f0f0;
-        }
-        .active-chat {
-            background: #e3f2fd;
-        }
-        .new-chat-btn {
-            margin-top: 10px;
-            padding: 10px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-        }
-        .logout-btn {
-            margin-top: 20px;
-            padding: 10px;
-            background: #f44336;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-        }
         #image-preview {
             max-width: 200px;
             max-height: 200px;
@@ -121,16 +80,18 @@
             margin-top: 5px;
             border-radius: 10px;
         }
+        .new-chat-btn {
+            margin-top: 10px;
+            padding: 10px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <h3>Chat History</h3>
-        <div id="chat-history"></div>
-        <button class="new-chat-btn" onclick="newChat()">New Chat</button>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-    
     <div class="chat-container">
         <div class="chat-header">
             <h2>Chat ID: {{ chat_id }}</h2>
@@ -156,39 +117,11 @@
                 <input type="file" id="image-input" accept="image/*">
                 <img id="image-preview" src="#" alt="Preview">
             </div>
+            <button class="new-chat-btn" onclick="newChat()">Start New Chat</button>
         </div>
     </div>
 
     <script>
-        // Load chat history
-        function loadChatHistory() {
-            fetch('/history')
-                .then(response => response.json())
-                .then(data => {
-                    const historyContainer = document.getElementById('chat-history');
-                    historyContainer.innerHTML = '';
-                    
-                    data.forEach(chat => {
-                        const chatItem = document.createElement('div');
-                        chatItem.className = 'chat-item';
-                        if (chat.chat_id === '{{ chat_id }}') {
-                            chatItem.classList.add('active-chat');
-                        }
-                        
-                        chatItem.innerHTML = `
-                            <strong>${chat.title}</strong><br>
-                            <small>${new Date(chat.last_activity).toLocaleString()}</small>
-                        `;
-                        
-                        chatItem.onclick = () => {
-                            window.location.href = `/chat?chat_id=${chat.chat_id}`;
-                        };
-                        
-                        historyContainer.appendChild(chatItem);
-                    });
-                });
-        }
-        
         // Send message
         function sendMessage() {
             const input = document.getElementById('message-input');
@@ -220,9 +153,6 @@
                     input.value = '';
                     imageInput.value = '';
                     document.getElementById('image-preview').style.display = 'none';
-                    
-                    // Reload history to update last activity
-                    loadChatHistory();
                 }
             })
             .catch(error => {
@@ -260,11 +190,6 @@
             window.location.href = '/chat';
         }
         
-        // Logout
-        function logout() {
-            window.location.href = '/logout';
-        }
-        
         // Handle Enter key
         document.getElementById('message-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -285,9 +210,6 @@
                 reader.readAsDataURL(file);
             }
         });
-        
-        // Initial load
-        loadChatHistory();
     </script>
 </body>
 </html>
