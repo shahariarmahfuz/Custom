@@ -47,10 +47,6 @@
         <h1>AI Response</h1>
         <form id="ai-form" enctype="multipart/form-data">
             <div>
-                <label for="user_id">User ID:</label>
-                <input type="text" id="user_id" name="user_id" required>
-            </div>
-            <div>
                 <label for="prompt">Text Prompt:</label>
                 <input type="text" id="prompt" name="prompt">
             </div>
@@ -63,14 +59,22 @@
         <div id="conversation"></div>
     </div>
     <script>
+        // Generate or retrieve user ID from local storage
+        let userId = localStorage.getItem('user_id');
+        if (!userId) {
+            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('user_id', userId);
+        }
+
         const form = document.getElementById('ai-form');
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const userId = document.getElementById('user_id').value;
             const prompt = document.getElementById('prompt').value;
             const imageInput = document.getElementById('image');
             const hasImage = imageInput.files.length > 0;
             const formData = new FormData(form);
+            formData.append('user_id', userId);  // Add user ID to form data
+
             try {
                 const response = await fetch('/', {
                     method: 'POST',
