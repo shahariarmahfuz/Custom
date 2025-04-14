@@ -1,16 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Response</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .error-message {
+            color: red;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome!</h1>
-    <form method="POST">
-        <label for="name">Your Name:</label><br>
-        <input type="text" id="name" name="name" required><br><br>
-        <label for="user_id">Select an ID:</label><br>
-        <input type="text" id="user_id" name="user_id" required><br><br>
-        <input type="submit" value="Submit">
-    </form>
+    <div class="container">
+        <h1>AI Response</h1>
+        <form id="ai-form" enctype="multipart/form-data">
+            <div>
+                <label for="user_id">User ID:</label>
+                <input type="text" id="user_id" name="user_id" required>
+            </div>
+            <div>
+                <label for="prompt">Text Prompt:</label>
+                <input type="text" id="prompt" name="prompt">
+            </div>
+            <div>
+                <label for="image">Upload Image:</label>
+                <input type="file" id="image" name="image">
+            </div>
+            <button type="submit">Get Response</button>
+        </form>
+        <div id="conversation"></div>
+    </div>
+    <script>
+        const form = document.getElementById('ai-form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const userId = document.getElementById('user_id').value;
+            const prompt = document.getElementById('prompt').value;
+            const imageInput = document.getElementById('image');
+            const hasImage = imageInput.files.length > 0;
+            const formData = new FormData(form);
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                if (data.error) {
+                    displayError(data.error);
+                } else {
+                    displayMessage(prompt, hasImage, data.response);
+                }
+            } catch (error) {
+                displayError(error.message);
+            }
+        });
+
+        function displayMessage(prompt, hasImage, response) {
+            const conversationDiv = document.getElementById('conversation');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            const userMessage = document.createElement('p');
+            userMessage.textContent = `You: ${prompt}` + (hasImage ? ' (with image)' : '');
+            const aiResponse = document.createElement('p');
+            aiResponse.textContent = `AI: ${response}`;
+            messageDiv.appendChild(userMessage);
+            messageDiv.appendChild(aiResponse);
+            conversationDiv.appendChild(messageDiv);
+        }
+
+        function displayError(errorMessage) {
+            const conversationDiv = document.getElementById('conversation');
+            const errorP = document.createElement('p');
+            errorP.classList.add('error-message');
+            errorP.textContent = `Error: ${errorMessage}`;
+            conversationDiv.appendChild(errorP);
+        }
+    </script>
 </body>
 </html>
