@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat History</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .chat-id {
+            font-size: 14px;
+            color: #666;
+        }
+        .message-list {
+            list-style: none;
+            padding: 0;
+        }
+        .message {
+            border: 1px solid #eee;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e6f7ff;
+        }
+        .ai-message {
+            background-color: #f9f9f9;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #666;
+        }
+        .navigation {
+            margin-top: 20px;
+        }
+        .chat-form {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Chat History</h1>
+            <div class="chat-id">Chat ID: {{ chat_id }}</div>
+        </div>
+        
+        <div class="navigation">
+            <a href="{{ url_for('history') }}">Back to History</a> | 
+            <a href="{{ url_for('chat') }}">New Chat</a> | 
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+
+        <ul class="message-list">
+            {% for message in chat_history.messages %}
+            <li class="message {% if loop.index0 % 2 == 0 %}user-message{% else %}ai-message{% endif %}">
+                <p class="message-time">{{ message.timestamp }}</p>
+                {% if loop.index0 % 2 == 0 %}
+                    <p><strong>You:</strong> {{ message.prompt }}</p>
+                    {% if message.image %}
+                    <p><em>Image attached</em></p>
+                    {% endif %}
+                {% else %}
+                    <p><strong>AI:</strong> {{ message.response }}</p>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+
+        <form class="chat-form" method="POST" action="{{ url_for('chat', chat_id=chat_id) }}" enctype="multipart/form-data">
+            <div>
+                <label for="prompt">Continue Chat:</label>
+                <input type="text" id="prompt" name="prompt" required>
+            </div>
+            <div>
+                <label for="image">Upload Image (Optional):</label>
+                <input type="file" id="image" name="image">
+            </div>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+</body>
+</html>
