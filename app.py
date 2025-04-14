@@ -7,7 +7,9 @@ import requests
 import hashlib
 import re
 
+app = Flask(__name__)
 app.secret_key = 'my-super-secret-key-817363'
+
 HISTORY_FILE = 'users.json'
 CHAT_HISTORY_DIR = 'chat_history'
 
@@ -223,7 +225,7 @@ def chat():
         updated_chat_history_data = load_chat_history(current_chat_id)
         if not updated_chat_history_data.get('messages'):
             updated_chat_history_data['messages'] = []
-        
+
         updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
@@ -241,10 +243,10 @@ def chat():
 
         return jsonify({'response': ai_response})
 
-    return render_template('chat_combined.html', 
-                         user_name=user_name, 
-                         chat_id=chat_id, 
-                         chat_history=processed_messages, 
+    return render_template('chat_combined.html',
+                         user_name=user_name,
+                         chat_id=chat_id,
+                         chat_history=processed_messages,
                          created_at=chat_history_data.get('created_at'))
 
 @app.route('/new_chat')
@@ -296,7 +298,7 @@ def account():
         session.clear()
         return redirect(url_for('login'))
 
-    return render_template('account.html', 
+    return render_template('account.html',
                          first_name=user['first_name'],
                          last_name=user['last_name'],
                          full_name=user['full_name'],
@@ -312,3 +314,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+        
