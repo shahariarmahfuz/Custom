@@ -23,8 +23,44 @@
             font-size: 14px;
             color: #666;
         }
-        .chat-form {
+        .message-container {
+            max-height: 500px;
+            overflow-y: auto;
             margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .message-list {
+            list-style: none;
+            padding: 0;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e6f7ff;
+            margin-left: 20%;
+        }
+        .ai-message {
+            background-color: #f9f9f9;
+            margin-right: 20%;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .message-content {
+            margin: 0;
+        }
+        .chat-form {
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
         }
         label {
             display: block;
@@ -33,7 +69,6 @@
         input[type="text"], input[type="file"] {
             width: 100%;
             padding: 8px;
-            margin-bottom: 10px;
             border: 1px solid #ccc;
             box-sizing: border-box;
         }
@@ -44,18 +79,12 @@
             border: none;
             cursor: pointer;
         }
-        .response-area {
-            margin-top: 20px;
-            border: 1px solid #eee;
-            padding: 15px;
-            background-color: #f9f9f9;
-        }
         .error-message {
             color: red;
             margin-top: 10px;
         }
         .navigation {
-            margin-top: 20px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -67,28 +96,58 @@
         </div>
         
         <div class="navigation">
-            <a href="{{ url_for('history') }}">View History</a> | 
+            <a href="{{ url_for('history') }}">View All Chats</a> | 
+            <a href="{{ url_for('chat') }}">New Chat</a> | 
             <a href="{{ url_for('logout') }}">Logout</a>
         </div>
 
+        <div class="message-container">
+            <ul class="message-list">
+                {% if chat_history %}
+                    {% for message in chat_history.messages %}
+                        <li class="message user-message">
+                            <div class="message-time">{{ message.timestamp }}</div>
+                            <p class="message-content"><strong>You:</strong> {{ message.prompt }}</p>
+                            {% if message.image %}
+                            <p><em>Image attached</em></p>
+                            {% endif %}
+                        </li>
+                        {% if message.response %}
+                        <li class="message ai-message">
+                            <div class="message-time">{{ message.timestamp }}</div>
+                            <p class="message-content"><strong>AI:</strong> {{ message.response }}</p>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
+                {% if response %}
+                    <li class="message user-message">
+                        <div class="message-time">Just now</div>
+                        <p class="message-content"><strong>You:</strong> {{ request.form.prompt }}</p>
+                        {% if request.files.image %}
+                        <p><em>Image attached</em></p>
+                        {% endif %}
+                    </li>
+                    <li class="message ai-message">
+                        <div class="message-time">Just now</div>
+                        <p class="message-content"><strong>AI:</strong> {{ response.response }}</p>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+
         <form class="chat-form" method="POST" enctype="multipart/form-data">
-            <div>
+            <div class="form-group">
                 <label for="prompt">Your Message:</label>
                 <input type="text" id="prompt" name="prompt" required>
             </div>
-            <div>
+            <div class="form-group">
                 <label for="image">Upload Image (Optional):</label>
                 <input type="file" id="image" name="image">
             </div>
             <button type="submit">Send</button>
         </form>
-
-        {% if response %}
-        <div class="response-area">
-            <h3>AI Response:</h3>
-            <p>{{ response.response }}</p>
-        </div>
-        {% endif %}
 
         {% if error %}
         <p class="error-message">{{ error }}</p>
