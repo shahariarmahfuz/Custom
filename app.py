@@ -46,6 +46,10 @@ def get_user_history(user_id):
         history = json.load(f)
         return history.get(user_id, {})
 
+def get_chat_history(user_id, chat_id):
+    user_history = get_user_history(user_id)
+    return user_history.get(chat_id, None)
+
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -64,7 +68,12 @@ def chat():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    # Get chat_id from URL or generate new one
     chat_id = request.args.get('chat_id', str(uuid.uuid4()))
+    
+    # Load existing chat history if available
+    chat_history = get_chat_history(session['user_id'], chat_id)
+    
     response_data = None
     
     if request.method == "POST":
@@ -78,7 +87,7 @@ def chat():
                 image_data_base64 = base64.b64encode(image_bytes).decode("utf-8")
             except Exception as e:
                 error_message = f"Error encoding image: {e}"
-                return render_template("chat.html", error=error_message, chat_id=chat_id)
+                return render_template("chat.html", error=error_message, chat_id=chat_id, chat_history=chat_history)
 
         payload = {
             "user_id": session['user_id'],
@@ -99,14 +108,18 @@ def chat():
                 response_data.get('response', ''),
                 image_data_base64
             )
+            
+            # Reload chat history after saving new message
+            chat_history = get_chat_history(session['user_id'], chat_id)
+            
         except requests.exceptions.RequestException as e:
             error_message = f"Error sending request to API: {e}"
-            return render_template("chat.html", error=error_message, chat_id=chat_id)
+            return render_template("chat.html", error=error_message, chat_id=chat_id, chat_history=chat_history)
         except ValueError:
             error_message = "Error decoding API response."
-            return render_template("chat.html", error=error_message, chat_id=chat_id)
+            return render_template("chat.html", error=error_message, chat_id=chat_id, chat_history=chat_history)
 
-    return render_template("chat.html", response=response_data, chat_id=chat_id)
+    return render_template("chat.html", response=response_data, chat_id=chat_id, chat_history=chat_history)
 
 @app.route("/history")
 def history():
@@ -115,19 +128,6 @@ def history():
     
     user_history = get_user_history(session['user_id'])
     return render_template("history.html", history=user_history)
-
-@app.route("/chat/<chat_id>")
-def view_chat(chat_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_history = get_user_history(session['user_id'])
-    chat_history = user_history.get(chat_id, None)
-    
-    if not chat_history:
-        return redirect(url_for('history'))
-    
-    return render_template("chat_history.html", chat_id=chat_id, chat_history=chat_history)
 
 @app.route("/logout")
 def logout():
