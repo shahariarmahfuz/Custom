@@ -207,18 +207,10 @@ def chat():
             processed_messages.append(msg)
 
     if request.method == 'POST':
-        user_text = request.form.get('user_input', '')
-        current_chat_id = request.form.get('chat_id')
-        image_file = request.files.get('image')
-        image_data_base64 = None
-
-        if image_file:
-            try:
-                image_bytes = image_file.read()
-                image_data_base64 = base64.b64encode(image_bytes).decode('utf-8')
-            except Exception as e:
-                error_message = f"Error encoding image: {e}"
-                return jsonify({'error': error_message})
+        data = request.get_json()
+        user_text = data.get('prompt', '')
+        image_data_base64 = data.get('image_data')
+        current_chat_id = request.args.get('chat_id') or str(uuid.uuid4()) # Ensure chat_id is available
 
         payload = {
             'user_id': session['user_id'],
@@ -245,6 +237,8 @@ def chat():
             updated_chat_history_data['messages'] = []
 
         updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
+        if image_data_base64:
+            updated_chat_history_data['messages'].append({'sender': 'user', 'content': f'<img src="{image_data_base64}" style="max-width: 200px; height: auto;">'})
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
 
@@ -332,4 +326,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-            
+        
