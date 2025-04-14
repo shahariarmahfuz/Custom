@@ -227,7 +227,7 @@ def chat():
         }
 
         # Send message to AI API using POST
-        api_url = "https://nekosite.ddns.net/ai"  # Removed query parameters
+        api_url = "https://worker-production-54e5.up.railway.app/ai""  # Removed query parameters
         try:
             response = requests.post(api_url, json=payload)
             response.raise_for_status()
