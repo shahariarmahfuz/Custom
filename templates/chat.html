@@ -1,204 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <title>Chat</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link href="https://fonts.cdnfonts.com/css/helvetica-neue-5?styles=15982" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
     <style>
-        /* Same CSS as main_combined_chat.html */
-        :root {
-            --font-size: 15px;
-            --input-height: 50px;
-            --header-height: 60px;
-            --primary-color: #1DA1F2;
-            --text-color: #E1E8ED;
-            --border-color: #2F3336;
-            --input-bg-color: #2F3336;
-            --main-font: 'Helvetica Neue', sans-serif;
-            --user-message-bg: #333;
-            --sidebar-width: 280px;
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
         }
-        /* Include all styles from main_combined_chat.html here */
-        /* For brevity, assume the CSS is identical except for adjustments below */
-        .input-area {
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
         }
-        .input-container {
-            display: flex;
-            flex: 1;
-            min-width: 0;
+        .chat-id {
+            font-size: 14px;
+            color: #666;
         }
-        #image_input {
-            padding: 10px;
-            color: var(--text-color);
-            background-color: var(--input-bg-color);
-            border-radius: 8px;
+        .chat-form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .response-area {
+            margin-top: 20px;
+            border: 1px solid #eee;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+        .navigation {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <button id="historyButton" class="icon-button" onclick="openHistory()">≡</button>
-        <h3>Chatting as {{ user_name }}</h3>
-        <button id="newChatButton" class="icon-button" onclick="window.location.href='/new_chat'">+</button>
-    </div>
-
-    <div class="messages" id="chat_area">
-        {% for message in chat_history %}
-            {% if message.sender == 'user' %}
-                <div class="user-message-container">
-                    <div class="user-message">{{ message.content }}</div>
-                </div>
-            {% elif message.sender == 'ai' %}
-                <div class="reply-message">{{ message.content|safe }}</div>
-            {% endif %}
-        {% endfor %}
-    </div>
-
-    <div class="input-area">
-        <div class="input-container">
-            <input type="hidden" id="chat_id" value="{{ chat_id }}">
-            <textarea id="user_input" placeholder="Type your message..." rows="1"></textarea>
-            <input type="file" id="image_input" name="image" accept="image/*">
+    <div class="container">
+        <div class="header">
+            <h1>Chat with AI</h1>
+            <div class="chat-id">Chat ID: {{ chat_id }}</div>
         </div>
-        <button id="sendButton" class="send-icon-button" onclick="sendMessage()">➜</button>
-    </div>
-
-    <div class="overlay" id="overlay"></div>
-    <div class="sidebar" id="history_sidebar">
-        <div class="sidebar-header">
-            <h4>Chat History</h4>
-            <button id="closeSidebar" class="icon-button" onclick="closeHistory()">×</button>
+        
+        <div class="navigation">
+            <a href="{{ url_for('history') }}">View History</a> | 
+            <a href="{{ url_for('logout') }}">Logout</a>
         </div>
-        <div id="history_list" class="history-items"></div>
-        <button id="accountButtonSidebar" class="sidebar-button" onclick="window.location.href='/account'">Account</button>
+
+        <form class="chat-form" method="POST" enctype="multipart/form-data">
+            <div>
+                <label for="prompt">Your Message:</label>
+                <input type="text" id="prompt" name="prompt" required>
+            </div>
+            <div>
+                <label for="image">Upload Image (Optional):</label>
+                <input type="file" id="image" name="image">
+            </div>
+            <button type="submit">Send</button>
+        </form>
+
+        {% if response %}
+        <div class="response-area">
+            <h3>AI Response:</h3>
+            <p>{{ response.response }}</p>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <p class="error-message">{{ error }}</p>
+        {% endif %}
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
-    <script>
-        let historySidebar = null;
-        let overlay = null;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            historySidebar = document.getElementById("history_sidebar");
-            overlay = document.getElementById("overlay");
-
-            const textarea = document.getElementById('user_input');
-            textarea.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-            });
-
-            textarea.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-        });
-
-        function openHistory() {
-            historySidebar.classList.add('active');
-            overlay.classList.add('active');
-            loadHistory();
-        }
-
-        function closeHistory() {
-            historySidebar.classList.remove('active');
-            overlay.classList.remove('active');
-        }
-
-        function loadHistory() {
-            fetch('/get_history')
-                .then(response => response.json())
-                .then(data => {
-                    const historyList = document.getElementById('history_list');
-                    historyList.innerHTML = '';
-                    if (!data || Object.keys(data).length === 0) {
-                        historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: #888;">No chat history</div>';
-                        return;
-                    }
-
-                    const sortedChats = Object.entries(data).sort(([, a], [, b]) => new Date(b.created_at) - new Date(a.created_at));
-                    for (const [chatId, chatData] of sortedChats) {
-                        const itemDiv = document.createElement('div');
-                        itemDiv.className = 'history-item';
-                        itemDiv.innerHTML = `
-                            <div class="history-item-title">${chatData.title}</div>
-                            <div class="history-item-meta">
-                                <span>${chatData.message_count} ${chatData.message_count === 1 ? 'message' : 'messages'}</span>
-                                <span>${new Date(chatData.created_at).toLocaleDateString()}</span>
-                            </div>
-                        `;
-                        itemDiv.addEventListener('click', () => window.location.href = `/chat?chat_id=${chatId}`);
-                        historyList.appendChild(itemDiv);
-                    }
-                });
-        }
-
-        function sendMessage() {
-            const userInput = document.getElementById('user_input');
-            const imageInput = document.getElementById('image_input');
-            const chatArea = document.getElementById('chat_area');
-            const chatId = document.getElementById('chat_id').value;
-            const message = userInput.value.trim();
-
-            if (!message && !imageInput.files.length) return;
-
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'user-message-container';
-            userMessageDiv.innerHTML = `<div class="user-message">${message}${imageInput.files.length ? ' [Image attached]' : ''}</div>`;
-            chatArea.appendChild(userMessageDiv);
-
-            userInput.value = '';
-            imageInput.value = '';
-            userInput.style.height = 'auto';
-
-            const loadingId = 'loading-' + Date.now();
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = loadingId;
-            loadingDiv.className = 'dot-loader';
-            loadingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-            chatArea.appendChild(loadingDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
-
-            const formData = new FormData();
-            formData.append('user_input', message);
-            formData.append('chat_id', chatId);
-            if (imageInput.files.length) {
-                formData.append('image', imageInput.files[0]);
-            }
-
-            fetch('/chat', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById(loadingId).remove();
-                const aiMessageDiv = document.createElement('div');
-                aiMessageDiv.className = 'reply-message';
-                aiMessageDiv.innerHTML = data.response;
-                chatArea.appendChild(aiMessageDiv);
-                chatArea.scrollTop = chatArea.scrollHeight;
-                Prism.highlightAll();
-            })
-            .catch(error => {
-                document.getElementById(loadingId).remove();
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'reply-message';
-                errorDiv.style.color = '#ff4444';
-                errorDiv.textContent = 'Error sending message';
-                chatArea.appendChild(errorDiv);
-                chatArea.scrollTop = chatArea.scrollHeight;
-            });
-        }
-    </script>
 </body>
 </html>
