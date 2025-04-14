@@ -1,3 +1,5 @@
+# Main_app.py
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
 import json
 import os
@@ -13,6 +15,7 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
 
 HISTORY_FILE = 'users.json'
 CHAT_HISTORY_DIR = 'chat_history'
+AI_API_URL = "https://worker-production-54e5.up.railway.app/ai"  # Using the API from example.py
 
 # Ensure directories exist
 if not os.path.exists(CHAT_HISTORY_DIR):
@@ -207,7 +210,7 @@ def chat():
             processed_messages.append(msg)
 
     if request.method == 'POST':
-        user_text = request.form.get('user_input', '')
+        user_text = request.form.get('user_input')
         current_chat_id = request.form.get('chat_id')
         image_file = request.files.get('image')
         image_data_base64 = None
@@ -215,21 +218,26 @@ def chat():
         if image_file:
             try:
                 image_bytes = image_file.read()
-                image_data_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                image_data_base64 = base64.b64encode(image_bytes).decode("utf-8")
             except Exception as e:
-                error_message = f"Error encoding image: {e}"
-                return jsonify({'error': error_message})
+                raw_error = f"Error encoding image: {e}"
+                ai_response = format_response(raw_error)
+                updated_chat_history_data = load_chat_history(current_chat_id)
+                if not updated_chat_history_data.get('messages'):
+                    updated_chat_history_data['messages'] = []
+                updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
+                updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
+                save_chat_history(current_chat_id, updated_chat_history_data)
+                return jsonify({'response': ai_response})
 
         payload = {
-            'user_id': session['user_id'],
-            'prompt': user_text,
-            'image_data': image_data_base64
+            "user_id": session['user_id'],
+            "prompt": user_text,
+            "image_data": image_data_base64
         }
 
-        # Send message to AI API using POST
-        api_url = "https://worker-production-54e5.up.railway.app/ai"  # Removed query parameters
         try:
-            response = requests.post(api_url, json=payload)
+            response = requests.post(AI_API_URL, json=payload)
             response.raise_for_status()
             ai_response_data = response.json()
             raw_response = ai_response_data.get('response', 'No response from AI.')
@@ -237,13 +245,16 @@ def chat():
         except requests.exceptions.RequestException as e:
             raw_error = f"Error communicating with AI: {e}"
             ai_response = format_response(raw_error)
+        except json.JSONDecodeError:
+            raw_error = "Error decoding AI response."
+            ai_response = format_response(raw_error)
 
         # Save chat history
         updated_chat_history_data = load_chat_history(current_chat_id)
         if not updated_chat_history_data.get('messages'):
             updated_chat_history_data['messages'] = []
 
-        updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text, 'image': bool(image_data_base64)})
+        updated_chat_history_data['messages'].append({'sender': 'user', 'content': user_text})
         updated_chat_history_data['messages'].append({'sender': 'ai', 'content': ai_response})
         save_chat_history(current_chat_id, updated_chat_history_data)
 
@@ -331,4 +342,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
+            
