@@ -7,20 +7,48 @@
     <style>
         body {
             font-family: sans-serif;
+            display: flex;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-right: 1px solid #ccc;
+        }
+        .sidebar h2 {
+            margin-top: 0;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            margin-bottom: 10px;
+            cursor: pointer;
         }
         .container {
-            width: 80%;
-            margin: 0 auto;
+            flex-grow: 1;
             padding: 20px;
         }
-        .history-list {
-            margin-bottom: 20px;
-        }
-        .history-item {
-            cursor: pointer;
-            padding: 5px;
-            border: 1px solid #ccc;
+        label {
+            display: block;
             margin-bottom: 5px;
+        }
+        input[type="text"], input[type="file"] {
+            width: calc(100% - 18px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
         .message {
             margin-bottom: 10px;
@@ -31,19 +59,27 @@
         .error-message {
             color: red;
         }
+        #conversation {
+            margin-top: 20px;
+        }
+        #conversation .message p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <h2>History</h2>
+        <ul id="history-list">
+            {% for chat in history %}
+                <li data-chat-id="{{ chat.chat_id }}">{{ chat.history[0].content[:30] }}... ({{ chat.history[-1].timestamp if chat.history else 'New' }})</li>
+            {% endfor %}
+        </ul>
+        <button onclick="logoutUser()">Logout</button>
+    </div>
     <div class="container">
         <h1>AI Response</h1>
-        <div class="history-list">
-            <h2>Chat History</h2>
-            {% for chat_id in history.keys() %}
-                <div class="history-item" onclick="loadChat('{{ chat_id }}')">{{ chat_id }}</div>
-            {% endfor %}
-        </div>
         <form id="ai-form" enctype="multipart/form-data">
-            <input type="hidden" id="chat_id" name="chat_id">
             <div>
                 <label for="prompt">Text Prompt:</label>
                 <input type="text" id="prompt" name="prompt">
@@ -52,24 +88,23 @@
                 <label for="image">Upload Image:</label>
                 <input type="file" id="image" name="image">
             </div>
+            <input type="hidden" id="chat_id" name="chat_id">
             <button type="submit">Get Response</button>
         </form>
         <div id="conversation"></div>
     </div>
     <script>
-        let currentChatId = null;
-
         const form = document.getElementById('ai-form');
+        const conversationDiv = document.getElementById('conversation');
+        const historyList = document.getElementById('history-list');
+        const chatIdInput = document.getElementById('chat_id');
+
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             const prompt = document.getElementById('prompt').value;
             const imageInput = document.getElementById('image');
             const hasImage = imageInput.files.length > 0;
             const formData = new FormData(form);
-            if (currentChatId) {
-                formData.append('chat_id', currentChatId);
-            }
-
             try {
                 const response = await fetch('/', {
                     method: 'POST',
@@ -82,46 +117,84 @@
                 if (data.error) {
                     displayError(data.error);
                 } else {
-                    currentChatId = data.chat_id;
-                    displayMessage(prompt, hasImage, data.response);
+                    displayMessage(prompt, hasImage, data.response, data.chat_id);
+                    loadUserHistory(); // Reload history after new message
                 }
             } catch (error) {
                 displayError(error.message);
             }
+            form.reset(); // Clear the input fields after submission
         });
 
-        async function loadChat(chatId) {
-            currentChatId = chatId;
-            document.getElementById('chat_id').value = chatId;
-            const response = await fetch(`/history/${chatId}`);
-            const chatHistory = await response.json();
-            const conversationDiv = document.getElementById('conversation');
-            conversationDiv.innerHTML = '';
-            chatHistory.forEach(message => {
-                displayMessage(message.prompt, false, message.response);
-            });
-        }
+        historyList.addEventListener('click', async (event) => {
+            if (event.target.tagName === 'LI') {
+                const chatId = event.target.dataset.chatId;
+                chatIdInput.value = chatId;
+                conversationDiv.innerHTML = ''; // Clear current conversation
+                try {
+                    const response = await fetch(`/history/${chatId}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to load history');
+                    }
+                    const data = await response.json();
+                    if (data.history) {
+                        data.history.forEach(item => {
+                            displayMessage(item.content, item.has_image, item.content, data.chat_id, item.role === 'user');
+                        });
+                    }
+                } catch (error) {
+                    displayError(error.message);
+                }
+            }
+        });
 
-        function displayMessage(prompt, hasImage, response) {
-            const conversationDiv = document.getElementById('conversation');
+        function displayMessage(prompt, hasImage, response, chatId, isUser = true) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
-            const userMessage = document.createElement('p');
-            userMessage.textContent = `You: ${prompt}` + (hasImage ? ' (with image)' : '');
+            const sender = isUser ? 'You' : 'AI';
+            const messageContent = document.createElement('p');
+            messageContent.textContent = `${sender}: ${prompt}` + (hasImage && isUser ? ' (with image)' : '');
             const aiResponse = document.createElement('p');
-            aiResponse.textContent = `AI: ${response}`;
-            messageDiv.appendChild(userMessage);
-            messageDiv.appendChild(aiResponse);
+            if (!isUser) {
+                aiResponse.textContent = `AI: ${response}`;
+            }
+            messageDiv.appendChild(messageContent);
+            if (!isUser) {
+                messageDiv.appendChild(aiResponse);
+            }
             conversationDiv.appendChild(messageDiv);
+            conversationDiv.scrollTop = conversationDiv.scrollHeight; // Scroll to the bottom
         }
 
         function displayError(errorMessage) {
-            const conversationDiv = document.getElementById('conversation');
             const errorP = document.createElement('p');
             errorP.classList.add('error-message');
             errorP.textContent = `Error: ${errorMessage}`;
             conversationDiv.appendChild(errorP);
         }
+
+        async function loadUserHistory() {
+            try {
+                const response = await fetch('/'); // Fetch the main page to get updated history
+                if (response.ok) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(await response.text(), 'text/html');
+                    const newHistoryList = doc.getElementById('history-list');
+                    if (newHistoryList) {
+                        historyList.innerHTML = newHistoryList.innerHTML;
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading history:", error);
+            }
+        }
+
+        function logoutUser() {
+            window.location.href = '/logout';
+        }
+
+        // Load history on page load
+        loadUserHistory();
     </script>
 </body>
 </html>
